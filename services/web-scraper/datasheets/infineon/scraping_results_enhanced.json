@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-07-29T10:09:23.795013",
+  "url": "https://www.infineon.com/products/power/gallium-nitride/gallium-nitride-transistor",
+  "total_products": 2,
+  "datasheets_downloaded": 0,
+  "errors": [],
+  "products": [
+    {
+      "part_number": "coolgan-simulation-tool-plecs",
+      "name": "CoolGaN™ Simulation Tool (PLECS)",
+      "description": "Find answers or ask questions. Connect with engineers across the globe, help solve technical challenges, and share knowledge with each other.",
+      "product_url": "https://www.infineon.com/design-resources/simulation-modeling/coolgan-simulation-tool-plecs",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:09:19.198580"
+    },
+    {
+      "part_number": "coolgan-simulation-tool-plecs",
+      "name": "CoolGaN™シミュレーションツール(PLECS)",
+      "description": "答えを見つけましょう。もしくは、ご質問ください。世界中のエンジニアとつながり、技術的な課題の解決を支援し、お互いに知識を共有します。",
+      "product_url": "https://www.infineon.com/ja/design-resources/simulation-modeling/coolgan-simulation-tool-plecs",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:09:21.785055"
+    }
+  ]
+}

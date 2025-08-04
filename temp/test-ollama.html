@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ollama API Test</title>
+</head>
+<body>
+    <h1>Ollama API Test</h1>
+    <button onclick="testOllama()">Test Ollama API</button>
+    <div id="result" style="font-family: monospace; white-space: pre-wrap;"></div>
+
+    <script>
+        async function testOllama() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Testing...\n';
+            
+            try {
+                // Test 1: Check models
+                resultDiv.textContent += '1. Checking models...\n';
+                const modelsResponse = await fetch('http://localhost:11434/api/tags');
+                if (!modelsResponse.ok) {
+                    throw new Error(`Models API failed: ${modelsResponse.status}`);
+                }
+                const modelsData = await modelsResponse.json();
+                resultDiv.textContent += `✅ Models OK: ${JSON.stringify(modelsData, null, 2)}\n`;
+                
+                // Test 2: Simple generate call
+                resultDiv.textContent += '2. Testing generate...\n';
+                const generateResponse = await fetch('http://localhost:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'llama3.1:8b',
+                        prompt: 'Say hello',
+                        stream: false
+                    })
+                });
+                
+                if (!generateResponse.ok) {
+                    const errorText = await generateResponse.text();
+                    throw new Error(`Generate failed: ${generateResponse.status} - ${errorText}`);
+                }
+                
+                const generateData = await generateResponse.json();
+                resultDiv.textContent += `✅ Generate OK: ${JSON.stringify(generateData, null, 2)}\n`;
+                
+            } catch (error) {
+                resultDiv.textContent += `❌ Error: ${error.message}\n`;
+                console.error('Test error:', error);
+            }
+        }
+    </script>
+</body>
+</html> 

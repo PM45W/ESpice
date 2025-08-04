@@ -1,0 +1,551 @@
+/* WebScrapingPage Light Mode Fixes */
+
+/* Force light mode colors for specific elements */
+.web-scraping-page {
+  --background: 220 20% 98% !important;
+  --foreground: 240 10% 10% !important;
+  --card: 0 0% 99% !important;
+  --card-foreground: 240 10% 10% !important;
+  --popover: 0 0% 98% !important;
+  --popover-foreground: 240 10% 10% !important;
+  --primary: 142.1 60% 38% !important;
+  --primary-foreground: 355.7 100% 97.3% !important;
+  --secondary: 220 16% 94% !important;
+  --secondary-foreground: 240 5.9% 15% !important;
+  --muted: 220 16% 94% !important;
+  --muted-foreground: 240 3.8% 46.1% !important;
+  --accent: 220 16% 92% !important;
+  --accent-foreground: 240 5.9% 15% !important;
+  --destructive: 0 70% 60% !important;
+  --destructive-foreground: 0 0% 98% !important;
+  --border: 220 13% 90% !important;
+  --input: 220 13% 90% !important;
+  --ring: 142.1 60% 38% !important;
+}
+
+/* Override dark mode class for this component */
+.web-scraping-page.dark,
+.dark .web-scraping-page {
+  --background: 220 20% 98% !important;
+  --foreground: 240 10% 10% !important;
+  --card: 0 0% 99% !important;
+  --card-foreground: 240 10% 10% !important;
+  --popover: 0 0% 98% !important;
+  --popover-foreground: 240 10% 10% !important;
+  --primary: 142.1 60% 38% !important;
+  --primary-foreground: 355.7 100% 97.3% !important;
+  --secondary: 220 16% 94% !important;
+  --secondary-foreground: 240 5.9% 15% !important;
+  --muted: 220 16% 94% !important;
+  --muted-foreground: 240 3.8% 46.1% !important;
+  --accent: 220 16% 92% !important;
+  --accent-foreground: 240 5.9% 15% !important;
+  --destructive: 0 70% 60% !important;
+  --destructive-foreground: 0 0% 98% !important;
+  --border: 220 13% 90% !important;
+  --input: 220 13% 90% !important;
+  --ring: 142.1 60% 38% !important;
+}
+
+/* Override any dark mode styles - but be more specific */
+.web-scraping-page {
+  color: hsl(var(--foreground)) !important;
+  background-color: hsl(var(--background)) !important;
+}
+
+/* Ensure proper scrollbar styling - override any existing styles */
+.web-scraping-page {
+  scrollbar-width: thin !important;
+  scrollbar-color: #d1d5db #f3f4f6 !important;
+}
+
+.web-scraping-page::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.web-scraping-page::-webkit-scrollbar-track {
+  background: #f3f4f6 !important;
+  border-radius: 4px !important;
+}
+
+.web-scraping-page::-webkit-scrollbar-thumb {
+  background: #d1d5db !important;
+  border-radius: 4px !important;
+}
+
+.web-scraping-page::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af !important;
+}
+
+/* Override any inherited scrollbar styles */
+.web-scraping-page .content::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.web-scraping-page .content::-webkit-scrollbar-track {
+  background: #f3f4f6 !important;
+  border-radius: 4px !important;
+}
+
+.web-scraping-page .content::-webkit-scrollbar-thumb {
+  background: #d1d5db !important;
+  border-radius: 4px !important;
+}
+
+.web-scraping-page .content::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af !important;
+}
+
+/* Ensure icons don't have unwanted backgrounds */
+.web-scraping-page svg {
+  background: transparent !important;
+}
+
+.web-scraping-page .icon {
+  background: transparent !important;
+}
+
+.web-scraping-page .card {
+  background: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--card-foreground)) !important;
+}
+
+.web-scraping-page .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.web-scraping-page .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+.web-scraping-page .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.web-scraping-page .border {
+  border-color: #e5e7eb !important;
+}
+
+/* Ensure buttons have proper light mode styling */
+.web-scraping-page .bg-blue-600 {
+  background-color: #2563eb !important;
+}
+
+.web-scraping-page .bg-emerald-600 {
+  background-color: #059669 !important;
+}
+
+.web-scraping-page .bg-purple-600 {
+  background-color: #9333ea !important;
+}
+
+.web-scraping-page .hover\:bg-blue-700:hover {
+  background-color: #1d4ed8 !important;
+}
+
+.web-scraping-page .hover\:bg-emerald-700:hover {
+  background-color: #047857 !important;
+}
+
+.web-scraping-page .hover\:bg-purple-700:hover {
+  background-color: #7c3aed !important;
+}
+
+/* Ensure text colors are properly visible in light mode */
+.web-scraping-page h1,
+.web-scraping-page h2,
+.web-scraping-page h3,
+.web-scraping-page h4,
+.web-scraping-page h5,
+.web-scraping-page h6 {
+  color: #111827 !important;
+}
+
+.web-scraping-page p {
+  color: #374151 !important;
+}
+
+/* Ensure form elements are properly styled */
+.web-scraping-page input,
+.web-scraping-page select,
+.web-scraping-page textarea {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #111827 !important;
+}
+
+.web-scraping-page input:focus,
+.web-scraping-page select:focus,
+.web-scraping-page textarea:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* Ensure badges and status indicators are visible */
+.web-scraping-page .badge {
+  background-color: #f3f4f6 !important;
+  color: #374151 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Ensure icons are visible and don't have backgrounds */
+.web-scraping-page svg {
+  color: #6b7280 !important;
+  background: transparent !important;
+  fill: currentColor !important;
+}
+
+.web-scraping-page .text-gray-400 svg {
+  color: #9ca3af !important;
+  background: transparent !important;
+}
+
+/* Ensure Lucide icons are properly styled */
+.web-scraping-page .lucide {
+  background: transparent !important;
+  fill: none !important;
+  stroke: currentColor !important;
+}
+
+/* Ensure button icons don't have backgrounds */
+.web-scraping-page button svg,
+.web-scraping-page .btn svg {
+  background: transparent !important;
+}
+
+/* Ensure badge icons don't have backgrounds */
+.web-scraping-page .badge svg {
+  background: transparent !important;
+}
+
+/* Additional specific overrides for UI components */
+.web-scraping-page .tabs-trigger {
+  background-color: #ffffff !important;
+  color: #374151 !important;
+  border-color: #d1d5db !important;
+}
+
+.web-scraping-page .tabs-trigger[data-state="active"] {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+.web-scraping-page .select-trigger {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #111827 !important;
+}
+
+.web-scraping-page .select-content {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+.web-scraping-page .select-item {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+}
+
+.web-scraping-page .select-item:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* Fix for select dropdown items */
+.web-scraping-page [data-radix-select-content] {
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.web-scraping-page [data-radix-select-item] {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  padding: 8px 12px !important;
+}
+
+.web-scraping-page [data-radix-select-item]:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.web-scraping-page [data-radix-select-item][data-highlighted] {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+/* Fix for select trigger */
+.web-scraping-page [data-radix-select-trigger] {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #111827 !important;
+}
+
+/* Fix for any dropdown content */
+.web-scraping-page [role="listbox"],
+.web-scraping-page [role="option"] {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+.web-scraping-page [role="option"]:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* Additional fixes for shadcn/ui Select component */
+.web-scraping-page .select-content,
+.web-scraping-page .SelectContent {
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  padding: 4px !important;
+}
+
+.web-scraping-page .select-item,
+.web-scraping-page .SelectItem {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  outline: none !important;
+}
+
+.web-scraping-page .select-item:hover,
+.web-scraping-page .SelectItem:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.web-scraping-page .select-item[data-highlighted],
+.web-scraping-page .SelectItem[data-highlighted] {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.web-scraping-page .select-trigger,
+.web-scraping-page .SelectTrigger {
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  color: #111827 !important;
+  border-radius: 6px !important;
+}
+
+/* Fix for any popover content */
+.web-scraping-page .popover-content,
+.web-scraping-page .PopoverContent {
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Comprehensive fix for all dropdown and select elements */
+.web-scraping-page [data-state="open"] {
+  background-color: #ffffff !important;
+}
+
+.web-scraping-page [data-state="open"] * {
+  background-color: inherit !important;
+}
+
+/* Fix for any element that might be a dropdown item */
+.web-scraping-page div[role="option"],
+.web-scraping-page li[role="option"],
+.web-scraping-page button[role="option"] {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+.web-scraping-page div[role="option"]:hover,
+.web-scraping-page li[role="option"]:hover,
+.web-scraping-page button[role="option"]:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* Fix for any element with dropdown-related classes */
+.web-scraping-page [class*="dropdown"],
+.web-scraping-page [class*="Dropdown"],
+.web-scraping-page [class*="select"],
+.web-scraping-page [class*="Select"] {
+  background-color: #ffffff !important;
+}
+
+/* Ensure all form elements have proper backgrounds */
+.web-scraping-page input,
+.web-scraping-page select,
+.web-scraping-page textarea,
+.web-scraping-page button,
+.web-scraping-page [role="combobox"],
+.web-scraping-page [role="listbox"] {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+.web-scraping-page .dialog-content {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+.web-scraping-page .alert {
+  background-color: #fef2f2 !important;
+  border-color: #fecaca !important;
+  color: #991b1b !important;
+}
+
+.web-scraping-page .alert[data-variant="default"] {
+  background-color: #f0fdf4 !important;
+  border-color: #bbf7d0 !important;
+  color: #166534 !important;
+}
+
+/* Ensure all text is readable in light mode */
+.web-scraping-page * {
+  color-scheme: light !important;
+}
+
+/* Override any remaining dark mode text colors */
+.web-scraping-page .dark\:text-white {
+  color: #111827 !important;
+}
+
+.web-scraping-page .dark\:text-gray-400 {
+  color: #6b7280 !important;
+}
+
+.web-scraping-page .dark\:text-gray-600 {
+  color: #4b5563 !important;
+}
+
+/* Ensure backgrounds are light */
+.web-scraping-page .dark\:bg-gray-900 {
+  background-color: #ffffff !important;
+}
+
+.web-scraping-page .dark\:bg-gray-800 {
+  background-color: #f9fafb !important;
+}
+
+.web-scraping-page .dark\:border-gray-600 {
+  border-color: #d1d5db !important;
+}
+
+/* Additional scrollbar fixes for specific content areas */
+.web-scraping-page .card-content,
+.web-scraping-page .tabs-content,
+.web-scraping-page .space-y-6 {
+  scrollbar-width: thin !important;
+  scrollbar-color: #d1d5db #f3f4f6 !important;
+}
+
+.web-scraping-page .card-content::-webkit-scrollbar,
+.web-scraping-page .tabs-content::-webkit-scrollbar,
+.web-scraping-page .space-y-6::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.web-scraping-page .card-content::-webkit-scrollbar-track,
+.web-scraping-page .tabs-content::-webkit-scrollbar-track,
+.web-scraping-page .space-y-6::-webkit-scrollbar-track {
+  background: #f3f4f6 !important;
+  border-radius: 4px !important;
+}
+
+.web-scraping-page .card-content::-webkit-scrollbar-thumb,
+.web-scraping-page .tabs-content::-webkit-scrollbar-thumb,
+.web-scraping-page .space-y-6::-webkit-scrollbar-thumb {
+  background: #d1d5db !important;
+  border-radius: 4px !important;
+}
+
+.web-scraping-page .card-content::-webkit-scrollbar-thumb:hover,
+.web-scraping-page .tabs-content::-webkit-scrollbar-thumb:hover,
+.web-scraping-page .space-y-6::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af !important;
+}
+
+/* Ensure proper background for specific elements */
+.web-scraping-page .card,
+.web-scraping-page .badge,
+.web-scraping-page .button,
+.web-scraping-page .input,
+.web-scraping-page .select-trigger {
+  background-color: inherit !important;
+}
+
+/* Remove background from text elements */
+.web-scraping-page h1,
+.web-scraping-page h2,
+.web-scraping-page h3,
+.web-scraping-page h4,
+.web-scraping-page h5,
+.web-scraping-page h6,
+.web-scraping-page p,
+.web-scraping-page span,
+.web-scraping-page div {
+  background: transparent !important;
+}
+
+/* Ensure all icons and decorative elements have transparent backgrounds */
+.web-scraping-page .icon,
+.web-scraping-page .lucide,
+.web-scraping-page [class*="icon"],
+.web-scraping-page [class*="Icon"] {
+  background: transparent !important;
+}
+
+/* Ensure specific icon classes have transparent backgrounds */
+.web-scraping-page .w-4,
+.web-scraping-page .w-5,
+.web-scraping-page .w-6,
+.web-scraping-page .h-4,
+.web-scraping-page .h-5,
+.web-scraping-page .h-6 {
+  background: transparent !important;
+}
+
+/* Override any button icon backgrounds */
+.web-scraping-page button *,
+.web-scraping-page .btn * {
+  background: transparent !important;
+}
+
+/* Ensure badge content has transparent backgrounds */
+.web-scraping-page .badge * {
+  background: transparent !important;
+}
+
+/* Ensure the main content area has proper scrollbar styling */
+.web-scraping-page .main-content,
+.web-scraping-page .content-area {
+  scrollbar-width: thin !important;
+  scrollbar-color: #d1d5db #f3f4f6 !important;
+}
+
+.web-scraping-page .main-content::-webkit-scrollbar,
+.web-scraping-page .content-area::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.web-scraping-page .main-content::-webkit-scrollbar-track,
+.web-scraping-page .content-area::-webkit-scrollbar-track {
+  background: #f3f4f6 !important;
+  border-radius: 4px !important;
+}
+
+.web-scraping-page .main-content::-webkit-scrollbar-thumb,
+.web-scraping-page .content-area::-webkit-scrollbar-thumb {
+  background: #d1d5db !important;
+  border-radius: 4px !important;
+}
+
+.web-scraping-page .main-content::-webkit-scrollbar-thumb:hover,
+.web-scraping-page .content-area::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af !important;
+} 

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESpice Architecture Map Test</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div class="container">
+        <h1>ESpice Interactive Architecture Map Test</h1>
+        
+        <!-- Architecture Controls -->
+        <div class="architecture-controls">
+            <button class="control-btn active" data-view="overview">Overview</button>
+            <button class="control-btn" data-view="detailed">Detailed</button>
+            <button class="control-btn" data-view="dataflow">Data Flow</button>
+            <button class="control-btn" data-view="services">Microservices</button>
+            <button class="control-btn" data-view="mcp">MCP Tools</button>
+        </div>
+        
+        <!-- Interactive Architecture Map -->
+        <div class="architecture-map-container">
+            <div class="architecture-map" id="architectureMap">
+                <!-- Nodes will be dynamically generated here -->
+            </div>
+            
+            <!-- Node Details Panel -->
+            <div class="node-details" id="nodeDetails">
+                <div class="details-header">
+                    <h3 id="nodeTitle">Select a node to view details</h3>
+                    <button class="close-details" id="closeDetails">×</button>
+                </div>
+                <div class="details-content" id="nodeContent">
+                    <p>Click on any node in the architecture map to see detailed information about that component.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Architecture Legend -->
+        <div class="architecture-legend">
+            <div class="legend-item">
+                <div class="legend-color frontend"></div>
+                <span>Frontend Components</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color backend"></div>
+                <span>Backend Services</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color mcp"></div>
+                <span>MCP Tools</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color data"></div>
+                <span>Data Storage</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color external"></div>
+                <span>External Services</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="scripts/architecture-map.js"></script>
+</body>
+</html> 

@@ -1,0 +1,29 @@
+# MCP Server Environment Configuration
+
+# Server Configuration
+PORT=8000
+HOST=0.0.0.0
+
+# Railway Deployment (Production)
+RAILWAY_URL=https://your-app-name.railway.app
+
+# Tesseract Configuration
+TESSERACT_CMD=/usr/bin/tesseract
+
+# OpenCV Configuration
+OPENCV_THREADS=4
+
+# Model Configuration
+DEFAULT_MODEL_TYPE=asm_hemt
+MAX_FILE_SIZE=50MB
+
+# Logging
+LOG_LEVEL=INFO
+ENABLE_DEBUG=false
+
+# CORS Configuration
+ALLOWED_ORIGINS=*
+
+# Rate Limiting
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=3600 
