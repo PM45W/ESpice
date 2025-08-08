@@ -372,23 +372,41 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = () => {
   const getCharacteristicName = (type: string): string => {
     const names: { [key: string]: string } = {
       'output_characteristics': 'Output Characteristics',
+      'output_characteristics_log': 'Output Characteristics (Log Scale)',
       'transfer_characteristics': 'Transfer Characteristics',
+      'transfer_characteristics_log': 'Transfer Characteristics (Log Scale)',
       'input_characteristics': 'Input Characteristics',
       'capacitance_characteristics': 'Capacitance Characteristics',
+      'capacitance_characteristics_log': 'Capacitance Characteristics (Log Scale)',
+      'on_resistance_characteristics': 'On-Resistance Characteristics',
+      'on_resistance_temperature': 'On-Resistance vs Temperature',
+      'gate_charge_characteristics': 'Gate Charge Characteristics',
       'switching_characteristics': 'Switching Characteristics',
-      'thermal_characteristics': 'Thermal Characteristics'
+      'thermal_characteristics': 'Normalized On-State Resistance vs Temperature',
+      'safe_operating_area': 'Safe Operating Area',
+      'body_diode_characteristics': 'Body Diode Characteristics',
+      'reverse_drain_source_characteristics': 'Reverse Drain-Source Characteristics'
     };
     return names[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const getCharacteristicDescription = (type: string): string => {
     const descriptions: { [key: string]: string } = {
-      'output_characteristics': 'Shows the relationship between output current and voltage',
-      'transfer_characteristics': 'Shows the relationship between input and output parameters',
+      'output_characteristics': 'Shows the relationship between drain current and drain-source voltage at different gate voltages',
+      'output_characteristics_log': 'Shows the relationship between drain current and drain-source voltage on logarithmic scale',
+      'transfer_characteristics': 'Shows the relationship between drain current and gate-source voltage at different temperatures',
+      'transfer_characteristics_log': 'Shows the relationship between drain current and gate-source voltage on logarithmic scale',
       'input_characteristics': 'Shows the relationship between input current and voltage',
-      'capacitance_characteristics': 'Shows capacitance vs voltage relationships',
-      'switching_characteristics': 'Shows switching speed and timing parameters',
-      'thermal_characteristics': 'Shows thermal resistance and junction temperature data'
+      'capacitance_characteristics': 'Shows capacitance vs drain-source voltage relationships for different capacitance types (linear scale)',
+      'capacitance_characteristics_log': 'Shows capacitance vs drain-source voltage relationships for different capacitance types (log scale)',
+      'on_resistance_characteristics': 'Shows on-resistance vs gate-source voltage at different drain currents',
+      'on_resistance_temperature': 'Shows on-resistance vs gate-source voltage at different temperatures',
+      'gate_charge_characteristics': 'Shows gate charge vs gate-source voltage at different drain-source voltages',
+      'switching_characteristics': 'Shows switching speed and timing parameters during turn-on and turn-off',
+      'thermal_characteristics': 'Shows normalized on-state resistance vs junction temperature',
+      'safe_operating_area': 'Shows the safe operating limits for voltage and current combinations',
+      'body_diode_characteristics': 'Shows body diode forward voltage vs current at different temperatures',
+      'reverse_drain_source_characteristics': 'Shows reverse drain-source current vs voltage characteristics at different temperatures'
     };
     return descriptions[type] || 'Characteristic data for this device parameter';
   };

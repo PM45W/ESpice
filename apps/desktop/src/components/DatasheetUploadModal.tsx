@@ -19,17 +19,30 @@ import DatasheetImageExtractionService, {
   ExtractedGraphImage, 
   DatasheetExtractionResult 
 } from '../services/datasheetImageExtractionService';
-import { Button } from './ui/button';
-import { Progress } from './ui/progress';
-import { Badge } from './ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Separator } from './ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { ScrollArea } from './ui/scroll-area';
-import { Switch } from './ui/switch';
-import { Label } from './ui/label';
-import { Input } from './ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import customGraphTypeService, { CustomGraphType } from '../services/customGraphTypeService';
+import { 
+  Button, 
+  Progress, 
+  Badge, 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  Separator, 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger, 
+  ScrollArea, 
+  Switch, 
+  Label, 
+  Input, 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@espice/ui';
 
 interface DatasheetUploadModalProps {
   isOpen: boolean;
@@ -58,7 +71,7 @@ const DatasheetUploadModal: React.FC<DatasheetUploadModalProps> = ({
     extractText: true,
     extractImages: true,
     graphDetectionSensitivity: 0.7,
-    defaultGraphType: 'output',
+    defaultGraphType: 'output_characteristics',
     autoProcessGraphs: true,
     saveExtractedImages: true,
     outputDirectory: 'extracted_graphs'
@@ -67,8 +80,24 @@ const DatasheetUploadModal: React.FC<DatasheetUploadModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [selectedGraphs, setSelectedGraphs] = useState<Set<string>>(new Set());
+  const [customGraphTypes, setCustomGraphTypes] = useState<CustomGraphType[]>([]);
 
   const datasheetExtractionService = DatasheetImageExtractionService.getInstance();
+
+  useEffect(() => {
+    if (isOpen) {
+      loadCustomGraphTypes();
+    }
+  }, [isOpen]);
+
+  const loadCustomGraphTypes = async () => {
+    try {
+      const types = await customGraphTypeService.getAllCustomGraphTypes();
+      setCustomGraphTypes(types);
+    } catch (error) {
+      console.error('Failed to load custom graph types:', error);
+    }
+  };
 
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
     const newFiles: UploadedFile[] = acceptedFiles.map(file => ({
@@ -220,11 +249,101 @@ const DatasheetUploadModal: React.FC<DatasheetUploadModalProps> = ({
 
   const getGraphTypeColor = (graphType: string) => {
     switch (graphType) {
-      case 'output': return 'bg-blue-100 text-blue-800';
-      case 'transfer': return 'bg-green-100 text-green-800';
-      case 'capacitance': return 'bg-purple-100 text-purple-800';
+      case 'output_characteristics':
+      case 'output_characteristics_log': return 'bg-blue-100 text-blue-800';
+      case 'transfer_characteristics':
+      case 'transfer_characteristics_log': return 'bg-green-100 text-green-800';
+      case 'capacitance_characteristics': return 'bg-purple-100 text-purple-800';
+      case 'on_resistance_characteristics': return 'bg-orange-100 text-orange-800';
+      case 'gate_charge_characteristics': return 'bg-pink-100 text-pink-800';
+      case 'switching_characteristics': return 'bg-indigo-100 text-indigo-800';
+      case 'thermal_characteristics': return 'bg-red-100 text-red-800';
+      case 'safe_operating_area': return 'bg-yellow-100 text-yellow-800';
+      case 'body_diode_characteristics': return 'bg-teal-100 text-teal-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getColorMeanings = (graphType: string) => {
+    // Check if it's a custom graph type
+    const customType = customGraphTypes.find(type => type.id === graphType);
+    if (customType) {
+      return customType.color_reps;
+    }
+
+    const colorMeanings: { [key: string]: { [key: string]: string } } = {
+             output_characteristics: {
+         red: 'VGS = 5V',
+         green: 'VGS = 4V',
+         yellow: 'VGS = 3V',
+         blue: 'VGS = 2V'
+       },
+       output_characteristics_log: {
+         red: 'VGS = 5V',
+         green: 'VGS = 4V',
+         yellow: 'VGS = 3V',
+         blue: 'VGS = 2V'
+       },
+             transfer_characteristics: {
+         blue: 'T = 25°C',
+         red: 'T = 125°C'
+       },
+       transfer_characteristics_log: {
+         blue: 'T = 25°C',
+         red: 'T = 125°C'
+       },
+                           capacitance_characteristics: {
+          red: 'COSS = CGD + CSD',
+          yellow: 'CISS = CGD + CGS',
+          green: 'CRSS = CGD'
+        },
+        capacitance_characteristics_log: {
+          red: 'COSS = CGD + CSD',
+          yellow: 'CISS = CGD + CGS',
+          green: 'CRSS = CGD'
+        },
+             on_resistance_characteristics: {
+         blue: 'ID = 20A',
+         green: 'ID = 40A',
+         yellow: 'ID = 60A',
+         red: 'ID = 80A'
+       },
+       on_resistance_temperature: {
+         blue: 'T = 25°C',
+         red: 'T = 125°C'
+       },
+      gate_charge_characteristics: {
+        blue: 'VDS = 6V',
+        red: 'VDS = 12V',
+        green: 'VDS = 3V',
+        yellow: 'VDS = 9V'
+      },
+      switching_characteristics: {
+        red: 'VDS',
+        blue: 'ID',
+        green: 'VGS',
+        yellow: 'IG'
+      },
+             thermal_characteristics: {
+         blue: 'ID = 40A, VGS = 5V'
+       },
+      safe_operating_area: {
+        red: 'DC',
+        blue: 'Pulse',
+        green: 'Single Pulse',
+        yellow: 'Repetitive Pulse'
+      },
+             body_diode_characteristics: {
+         blue: 'T = 25°C',
+         red: 'T = 125°C'
+       },
+      reverse_drain_source_characteristics: {
+        blue: 'T = 25°C',
+        red: 'T = 125°C'
+      }
+    };
+    
+    return colorMeanings[graphType] || {};
   };
 
   if (!isOpen) return null;
@@ -370,9 +489,30 @@ const DatasheetUploadModal: React.FC<DatasheetUploadModalProps> = ({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="output">Output Characteristics</SelectItem>
-                        <SelectItem value="transfer">Transfer Characteristics</SelectItem>
-                        <SelectItem value="capacitance">Capacitance</SelectItem>
+                        <SelectItem value="output_characteristics">Output Characteristics</SelectItem>
+                        <SelectItem value="output_characteristics_log">Output Characteristics (Log Scale)</SelectItem>
+                        <SelectItem value="transfer_characteristics">Transfer Characteristics</SelectItem>
+                        <SelectItem value="transfer_characteristics_log">Transfer Characteristics (Log Scale)</SelectItem>
+                        <SelectItem value="capacitance_characteristics">Capacitance Characteristics</SelectItem>
+                        <SelectItem value="capacitance_characteristics_log">Capacitance Characteristics (Log Scale)</SelectItem>
+                                                 <SelectItem value="on_resistance_characteristics">On-Resistance Characteristics</SelectItem>
+                         <SelectItem value="on_resistance_temperature">On-Resistance vs Temperature</SelectItem>
+                         <SelectItem value="gate_charge_characteristics">Gate Charge Characteristics</SelectItem>
+                         <SelectItem value="switching_characteristics">Switching Characteristics</SelectItem>
+                         <SelectItem value="thermal_characteristics">Normalized On-State Resistance vs Temperature</SelectItem>
+                         <SelectItem value="safe_operating_area">Safe Operating Area</SelectItem>
+                         <SelectItem value="body_diode_characteristics">Body Diode Characteristics</SelectItem>
+                         <SelectItem value="reverse_drain_source_characteristics">Reverse Drain-Source Characteristics</SelectItem>
+                        {customGraphTypes.length > 0 && (
+                          <>
+                            <SelectItem value="custom" disabled>── Custom Graph Types ──</SelectItem>
+                            {customGraphTypes.map((customType) => (
+                              <SelectItem key={customType.id} value={customType.id}>
+                                {customType.name}
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
                         <SelectItem value="custom">Custom</SelectItem>
                       </SelectContent>
                     </Select>
@@ -424,10 +564,6 @@ const DatasheetUploadModal: React.FC<DatasheetUploadModalProps> = ({
                   <Button size="sm" onClick={handleExportCSV}>
                     <Download className="w-4 h-4 mr-2" />
                     Export CSV
-                  </Button>
-                  <Button size="sm" onClick={handleSaveImages}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Images
                   </Button>
                 </div>
               )}
@@ -515,6 +651,31 @@ const DatasheetUploadModal: React.FC<DatasheetUploadModalProps> = ({
                                     +{graph.detectedColors.length - 5} more
                                   </span>
                                 )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Color Meanings */}
+                          {graph.graphType && graph.graphType !== 'custom' && (
+                            <div className="mt-2">
+                              <p className="text-xs text-muted-foreground mb-1">Color Meanings:</p>
+                              <div className="grid grid-cols-2 gap-1 text-xs">
+                                {Object.entries(getColorMeanings(graph.graphType)).map(([color, meaning]) => (
+                                  <div key={color} className="flex items-center gap-1">
+                                    <div
+                                      className="w-3 h-3 rounded border border-border"
+                                      style={{ 
+                                        backgroundColor: color === 'red' ? '#ef4444' : 
+                                                       color === 'blue' ? '#3b82f6' : 
+                                                       color === 'green' ? '#22c55e' : 
+                                                       color === 'yellow' ? '#eab308' : 
+                                                       color === 'purple' ? '#a855f7' : 
+                                                       color === 'orange' ? '#f97316' : '#6b7280'
+                                      }}
+                                    />
+                                    <span className="text-muted-foreground">{meaning}</span>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           )}

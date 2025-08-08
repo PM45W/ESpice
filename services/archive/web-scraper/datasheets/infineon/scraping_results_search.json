@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-07-29T10:18:41.357168",
+  "total_products": 1,
+  "datasheets_downloaded": 0,
+  "errors": [],
+  "products": [
+    {
+      "part_number": "coolgan-simulation-tool-plecs",
+      "name": "CoolGaN™ Simulation Tool (PLECS)",
+      "description": "Find answers or ask questions. Connect with engineers across the globe, help solve technical challenges, and share knowledge with each other.",
+      "product_url": "https://www.infineon.com/design-resources/simulation-modeling/coolgan-simulation-tool-plecs",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:18:39.342330"
+    }
+  ]
+}

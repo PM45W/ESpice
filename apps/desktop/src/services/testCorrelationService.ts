@@ -1,5 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
-
 export interface TestDataType {
   iv_curve: 'iv_curve';
   cv_curve: 'cv_curve';

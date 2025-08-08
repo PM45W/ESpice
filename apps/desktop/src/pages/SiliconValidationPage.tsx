@@ -25,12 +25,18 @@ import SiliconValidationService, {
   type SiliconDataPoint,
   type SiliconValidationResult
 } from '../services/siliconValidationService';
-import { Button } from '../components/ui/button';
-import { Progress } from '../components/ui/progress';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Label } from '../components/ui/label';
-import { Separator } from '../components/ui/separator';
-import { Input } from '../components/ui/input';
+import { 
+  Button,
+  Progress,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Label,
+  Separator,
+  Input
+} from '@espice/ui';
 import { useSystemMonitor } from '../hooks/useSystemMonitor';
 // import { productService } from '../services/productService';
 import type { SPICEModel, Product } from '../types';

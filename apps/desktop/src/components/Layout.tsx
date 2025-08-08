@@ -6,8 +6,6 @@ import {
   Upload, 
   FileText, 
   Settings, 
-  Menu, 
-  X, 
   Search, 
   Bell, 
   Sun, 
@@ -15,29 +13,29 @@ import {
   ChevronDown,
   User,
   LogOut,
-  Cpu,
   Database,
   BarChart3,
   Shield,
   Target,
   Globe,
   Zap,
-  ChevronLeft,
-  ChevronRight,
-  Layers
+  Menu,
+  
 } from 'lucide-react'
-import { Button } from './ui/button'
-import { Input } from './ui/input'
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { Separator } from './ui/separator'
-import {
+import { 
+  Button,
+  Input,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Separator,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu'
+  DropdownMenuTrigger
+} from '@espice/ui'
 import { useSystemMonitor } from '../hooks/useSystemMonitor'
 import Logo from '../assets/logo.svg';
 
@@ -92,9 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children, extractButton, serviceStatus,
     setSidebarOpen(prev => !prev)
   }, [])
 
-  const toggleSidebarMinimized = useCallback(() => {
-    setSidebarMinimized((prev) => !prev)
-  }, [])
+  // Removed sidebar minimize toggle per UI request
 
   const closeSidebar = useCallback(() => {
     setSidebarOpen(false)
@@ -142,7 +138,7 @@ const Layout: React.FC<LayoutProps> = ({ children, extractButton, serviceStatus,
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
-                      className="fixed inset-0 z-40 bg-[hsl(var(--foreground))] bg-opacity-80 lg:hidden"
+          className="fixed left-0 right-0 bottom-0 top-16 z-40 bg-[hsl(var(--foreground))] bg-opacity-80 lg:hidden"
           onClick={closeSidebar}
           aria-hidden="true"
         />
@@ -153,42 +149,12 @@ const Layout: React.FC<LayoutProps> = ({ children, extractButton, serviceStatus,
         {/* Sidebar */}
         <aside className={`
           ${sidebarMinimized ? 'w-16 min-w-16' : 'w-80 min-w-80'}
-          bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] shadow-sm h-screen overflow-y-auto overflow-x-hidden flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out sidebar-container
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          fixed lg:relative z-50 lg:z-auto
+          bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] shadow-sm overflow-y-auto overflow-x-hidden flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out sidebar-container
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          fixed left-0 top-16 z-50 h-[calc(100vh-4rem)]
         `}>
-          {/* Logo Header */}
-          <div className="bg-muted/50 border-b border-border flex-shrink-0 p-6 flex items-center justify-between">
-            <div className="flex items-center w-full pl-2">
-              <img src={Logo} alt="ESpice Logo" className={`transition-all duration-300 ${sidebarMinimized ? 'w-8 h-8' : 'w-12 h-12'} my-0`} />
-              {!sidebarMinimized && (
-                <div className="ml-2 flex flex-col justify-center">
-                  <span className="text-xl font-bold text-[hsl(var(--primary))] font-mono leading-tight">ESpice</span>
-                  <div className="text-xs text-muted-foreground font-mono leading-tight">v{metrics.app.version}</div>
-                </div>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 ml-2"
-              onClick={toggleSidebarMinimized}
-              aria-label={sidebarMinimized ? 'Expand sidebar' : 'Minimize sidebar'}
-            >
-              {sidebarMinimized ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden h-8 w-8"
-              onClick={closeSidebar}
-              aria-label="Close sidebar"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
           {/* Navigation */}
-          <nav className={`flex-1 overflow-y-auto overflow-x-hidden p-6 ${sidebarMinimized ? 'px-2 py-4' : ''}`} role="navigation" aria-label="Main navigation">
+          <nav className={`flex-1 overflow-y-auto overflow-x-hidden pt-2 px-4 pb-4 ${sidebarMinimized ? 'px-2 py-2' : ''}`} role="navigation" aria-label="Main navigation">
             <div className="space-y-2">
               {navigation.map((item) => {
                 const Icon = item.icon
@@ -275,12 +241,19 @@ const Layout: React.FC<LayoutProps> = ({ children, extractButton, serviceStatus,
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden h-8 w-8"
+              className="h-8 w-8"
               onClick={toggleSidebar}
-              aria-label="Open sidebar"
+              aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+              aria-pressed={sidebarOpen}
             >
               <Menu className="h-4 w-4" />
             </Button>
+
+            {/* Brand */}
+            <a href="/" className="hidden lg:flex items-center gap-2 no-underline">
+              <img src={Logo} alt="ESpice Logo" className="w-8 h-8" />
+              <span className="text-lg font-bold text-[hsl(var(--primary))] font-mono leading-tight">ESpice</span>
+            </a>
 
             {/* Global Search Bar - Moved to Left */}
             <div className="relative flex-1 max-w-md">
@@ -315,39 +288,7 @@ const Layout: React.FC<LayoutProps> = ({ children, extractButton, serviceStatus,
               />
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Minimized Statistics Cards */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 px-2 py-1 rounded bg-muted/50 hover:bg-muted/70 transition-colors cursor-pointer group">
-                  <Database className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-mono text-muted-foreground group-hover:text-foreground">
-                    {metrics.products || 0}
-                  </span>
-                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    Total Products
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-1 px-2 py-1 rounded bg-muted/50 hover:bg-muted/70 transition-colors cursor-pointer group">
-                  <Cpu className="w-4 h-4 text-success" />
-                  <span className="text-xs font-mono text-muted-foreground group-hover:text-foreground">
-                    {metrics.manufacturers || 0}
-                  </span>
-                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    Manufacturers
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-1 px-2 py-1 rounded bg-muted/50 hover:bg-muted/70 transition-colors cursor-pointer group">
-                  <Layers className="w-4 h-4 text-info" />
-                  <span className="text-xs font-mono text-muted-foreground group-hover:text-foreground">
-                    {metrics.deviceTypes || 0}
-                  </span>
-                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    Device Types
-                  </span>
-                </div>
-              </div>
+            <div className="ml-auto flex items-center gap-3">
 
               {/* Extract Button for Graph Extraction Page */}
               {extractButton && (
@@ -356,38 +297,7 @@ const Layout: React.FC<LayoutProps> = ({ children, extractButton, serviceStatus,
                 </div>
               )}
               
-              {/* System Indicators */}
-              <div className="flex items-center gap-3 px-3 py-1 rounded bg-muted/50">
-                <div className={`w-2 h-2 rounded-full ${metrics.network.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-xs font-mono text-muted-foreground">
-                  {metrics.network.status.toUpperCase()}
-                </span>
-              </div>
-
-              {/* Service Status Indicator */}
-              {serviceStatus && (
-                <div className="flex items-center gap-2 px-3 py-1 rounded bg-muted/50">
-                  <div className={`w-2 h-2 rounded-full ${
-                    serviceStatus === 'available' ? 'bg-green-500' : 
-                    serviceStatus === 'unavailable' ? 'bg-red-500' : 
-                    'bg-yellow-500'
-                  }`}></div>
-                  <span className="text-xs font-mono text-muted-foreground">
-                    {serviceStatus === 'available' ? 'API' : 
-                     serviceStatus === 'unavailable' ? 'API' : 
-                     'API'}
-                  </span>
-                  {serviceStatus === 'unavailable' && onServiceRetry && (
-                    <button
-                      onClick={onServiceRetry}
-                      className="text-xs text-blue-500 hover:text-blue-400 font-mono"
-                      title={serviceError || 'Service unavailable'}
-                    >
-                      RETRY
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* Service/Network indicators removed per request */}
 
               <Button
                 variant="ghost"
@@ -442,7 +352,7 @@ const Layout: React.FC<LayoutProps> = ({ children, extractButton, serviceStatus,
 
           {/* Page content */}
           <main className="flex-1 overflow-y-auto overflow-x-hidden p-6">
-            <div className="mx-auto max-w-7xl">
+            <div className="mx-auto w-full">
               {children}
             </div>
           </main>

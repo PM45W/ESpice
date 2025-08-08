@@ -90,6 +90,18 @@ export interface OCRResult {
   error?: string;
 }
 
+export interface OCRWordResult {
+  id: string;
+  text: string;
+  confidence: number;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
 export interface LayoutAnalysisResult {
   pages: PageLayout[];
   textBlocks: TextBlock[];

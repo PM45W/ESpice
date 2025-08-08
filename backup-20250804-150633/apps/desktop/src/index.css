@@ -1,0 +1,1051 @@
+@import 'tailwindcss';
+@import './styles/theme-system.css';
+@import './styles/design-system.css';
+@import './styles/web-scraping-fixes.css';
+
+/* ===== GLOBAL STYLES ===== */
+/* Remove the overly broad border color application */
+/* * {
+  border-color: hsl(var(--border));
+} */
+
+/* Apply border color only to elements that should have borders */
+.card, .eda-panel, .input, select, textarea, .btn-outline {
+  border-color: hsl(var(--border));
+}
+
+/* Ensure all select elements have solid backgrounds */
+select {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+  /* Remove any transparency effects */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  /* Ensure proper appearance */
+  appearance: auto;
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+}
+
+/* Ensure select options are also visible */
+select option {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+}
+
+/* Ensure all form controls have solid backgrounds - but preserve button borders */
+input, textarea, select {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+  /* Remove any transparency effects */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Ensure form controls in focus state maintain solid backgrounds */
+input:focus, textarea:focus, select:focus {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+}
+
+/* Ensure form controls in hover state maintain solid backgrounds */
+input:hover, textarea:hover, select:hover {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+}
+
+body {
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== EDA-SPECIFIC STYLES ===== */
+
+/* EDA Panel System */
+.eda-panel {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.eda-panel-header {
+  background: hsl(var(--muted));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 1rem 1.5rem;
+}
+
+.eda-panel-header span {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.eda-panel-content {
+  padding: 1.5rem;
+}
+
+.eda-panel-footer {
+  background: hsl(var(--muted));
+  border-top: 1px solid hsl(var(--border));
+  padding: 1rem 1.5rem;
+}
+
+/* EDA Grid System */
+.eda-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.eda-grid-cols-1 {
+  grid-template-columns: repeat(1, 1fr);
+}
+
+.eda-grid-cols-2 {
+  grid-template-columns: repeat(1, 1fr);
+}
+@media (min-width: 768px) {
+  .eda-grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.eda-grid-cols-3 {
+  grid-template-columns: repeat(1, 1fr);
+}
+@media (min-width: 768px) {
+  .eda-grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .eda-grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.eda-grid-cols-4 {
+  grid-template-columns: repeat(1, 1fr);
+}
+@media (min-width: 768px) {
+  .eda-grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .eda-grid-cols-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* EDA Status Indicators */
+.eda-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.eda-status-success {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.eda-status-warning {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.eda-status-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.eda-status-info {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* EDA Color Classes */
+.text-eda-success {
+  color: #16a34a;
+}
+
+.text-eda-warning {
+  color: #d97706;
+}
+
+.text-eda-error {
+  color: #dc2626;
+}
+
+.text-eda-info {
+  color: #2563eb;
+}
+
+/* Header Search Input Specific Styles */
+.header-search-input {
+  padding-left: 2.5rem !important;
+  position: relative;
+  z-index: 1;
+}
+
+.header-search-input:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 2px hsl(var(--primary));
+}
+
+/* Ensure search icon stays above input */
+.header-search-input + .absolute {
+  z-index: 10;
+}
+
+/* Button styles - Unified and consistent */
+.btn, button, .button {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Primary buttons - Blue theme */
+.btn-primary, button[data-variant="primary"] {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 2px 4px hsl(var(--primary) / 0.2) !important;
+}
+
+/* Secondary buttons - Gray theme */
+.btn-secondary, button[data-variant="secondary"] {
+  background-color: hsl(var(--secondary)) !important;
+  color: hsl(var(--secondary-foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Outline buttons */
+.btn-outline, button[data-variant="outline"] {
+  background-color: transparent !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Ghost buttons - Transparent */
+.btn-ghost, button[data-variant="ghost"], button[class*="ghost"] {
+  background-color: transparent !important;
+  color: hsl(var(--foreground)) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Icon buttons - Completely transparent and borderless */
+button[data-size="icon"], button[class*="icon"], .tool-btn, .change-label-btn {
+  background-color: transparent !important;
+  color: hsl(var(--foreground)) !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* Button hover states */
+.btn:hover, button:hover, .button:hover {
+  opacity: 0.9 !important;
+  transform: translateY(-1px) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Ghost button hover states */
+.btn-ghost:hover, button[data-variant="ghost"]:hover, button[class*="ghost"]:hover {
+  background-color: hsl(var(--accent) / 0.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Icon button hover states */
+button[data-size="icon"]:hover, button[class*="icon"]:hover, .tool-btn:hover, .change-label-btn:hover {
+  background-color: hsl(var(--accent) / 0.1) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px hsl(var(--accent) / 0.2) !important;
+  border: none !important;
+  border-color: transparent !important;
+}
+
+/* Button focus states */
+.btn:focus, button:focus, .button:focus {
+  outline: 2px solid hsl(var(--ring)) !important;
+  outline-offset: 2px !important;
+}
+
+/* ===== WORD BUTTON STYLES ===== */
+
+/* Word buttons with subtle highlighting */
+.word-button,
+button[data-type="word"],
+button[class*="word"] {
+  background-color: hsl(var(--accent) / 0.1) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  border: 1px solid hsl(var(--accent) / 0.3) !important;
+  border-radius: 6px !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.word-button:hover,
+button[data-type="word"]:hover,
+button[class*="word"]:hover {
+  background-color: hsl(var(--accent) / 0.2) !important;
+  border-color: hsl(var(--accent)) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+}
+
+.word-button:active,
+button[data-type="word"]:active,
+button[class*="word"]:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ===== DROPDOWN AND SELECT FIXES ===== */
+
+/* Ensure all dropdown and select elements are non-transparent */
+select, option, [data-radix-popper-content-wrapper], [role="menu"], [role="listbox"], .dropdown-content, .dropdown-menu {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+/* Ensure all dropdown items are visible */
+[role="menuitem"], [role="option"], .dropdown-item {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+}
+
+[role="menuitem"]:hover, [role="option"]:hover, .dropdown-item:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Fix for any Radix UI dropdown components */
+[data-radix-popper-content-wrapper] * {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+}
+
+/* Fix for any element with dropdown-related classes */
+[class*="dropdown"], [class*="Dropdown"] {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ===== SIDEBAR SEARCH ICON REMOVAL ===== */
+
+/* Hide search icon in sidebar - Comprehensive removal */
+.sidebar .search-icon,
+.sidebar [class*="search"],
+.sidebar [class*="Search"],
+.sidebar [data-testid*="search"],
+.sidebar [aria-label*="search"],
+.sidebar [aria-label*="Search"],
+.sidebar svg[class*="search"],
+.sidebar .icon[class*="search"],
+.sidebar button[class*="search"],
+.sidebar .nav-item[class*="search"],
+.sidebar .sidebar-nav-item[class*="search"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ===== UTILITY CLASSES ===== */
+.text-overflow-ellipsis {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.flex-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-container {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground)) transparent;
+}
+
+.sidebar-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground));
+  border-radius: 3px;
+}
+
+.sidebar-container::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--foreground));
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.slide-in {
+  animation: slideInFromBottom 0.3s ease-in-out;
+}
+
+.scale-in {
+  animation: scaleIn 0.2s ease-in-out;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .eda-grid-cols-2,
+  .eda-grid-cols-3,
+  .eda-grid-cols-4 {
+    @apply grid-cols-1;
+  }
+}
+
+@media (max-width: 1024px) {
+  .eda-grid-cols-3,
+  .eda-grid-cols-4 {
+    @apply grid-cols-2;
+  }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-break {
+    break-before: page;
+  }
+}
+
+/* ===== ENHANCED SWITCH AND TOGGLE STYLES ===== */
+
+/* Base switch/toggle styles - High specificity to ensure they work */
+input[type="checkbox"],
+input[type="radio"],
+.switch,
+.toggle,
+[data-state="checked"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  width: 20px !important;
+  height: 20px !important;
+  background-color: hsl(var(--background)) !important;
+  border: 2px solid hsl(var(--border)) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+}
+
+/* Checkbox specific styles */
+input[type="checkbox"]:checked,
+input[type="checkbox"][data-state="checked"] {
+  background-color: hsl(var(--primary)) !important;
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2) !important;
+}
+
+input[type="checkbox"]:checked::after,
+input[type="checkbox"][data-state="checked"]::after {
+  content: '✓' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  font-size: 12px !important;
+  font-weight: bold !important;
+}
+
+/* Radio button specific styles */
+input[type="radio"],
+input[type="radio"][data-state="checked"] {
+  border-radius: 50% !important;
+}
+
+input[type="radio"]:checked,
+input[type="radio"][data-state="checked"] {
+  background-color: hsl(var(--primary)) !important;
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2) !important;
+}
+
+input[type="radio"]:checked::after,
+input[type="radio"][data-state="checked"]::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 6px !important;
+  height: 6px !important;
+  background-color: hsl(var(--primary-foreground)) !important;
+  border-radius: 50% !important;
+}
+
+/* Hover states */
+input[type="checkbox"]:hover,
+input[type="radio"]:hover,
+.switch:hover,
+.toggle:hover {
+  border-color: hsl(var(--primary)) !important;
+  transform: scale(1.05) !important;
+}
+
+/* ===== ENHANCED DIALOG AND MODAL STYLES ===== */
+
+/* Dialog and Modal Content Styles - Enhanced for solid appearance */
+[data-radix-dialog-content],
+.dialog-content,
+.modal-content,
+[role="dialog"],
+.modal,
+.dialog {
+  background-color: hsl(var(--card)) !important;
+  border: 2px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 12px !important;
+  padding: 1.5rem !important;
+  z-index: 1000 !important;
+}
+
+/* Config blocks within dialogs */
+[data-radix-dialog-content] .space-y-4,
+.dialog-content .space-y-4,
+.modal-content .space-y-4,
+[role="dialog"] .space-y-4,
+.modal .space-y-4,
+.dialog .space-y-4 {
+  background-color: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 8px !important;
+  padding: 1.25rem !important;
+  margin: 0.75rem 0 !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Form elements within dialogs */
+[data-radix-dialog-content] input,
+[data-radix-dialog-content] select,
+[data-radix-dialog-content] textarea,
+.dialog-content input,
+.dialog-content select,
+.dialog-content textarea,
+.modal-content input,
+.modal-content select,
+.modal-content textarea,
+[role="dialog"] input,
+[role="dialog"] select,
+[role="dialog"] textarea,
+.modal input,
+.modal select,
+.modal textarea,
+.dialog input,
+.dialog select,
+.dialog textarea {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  opacity: 1 !important;
+  border-radius: 6px !important;
+  padding: 0.75rem !important;
+}
+
+/* ===== ENHANCED WORD BUTTON STYLES ===== */
+
+/* Word buttons with enhanced highlighting */
+.word-button,
+button[data-type="word"],
+button[class*="word"],
+.word-btn,
+[data-word-button="true"] {
+  background-color: hsl(var(--accent) / 0.15) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  border: 1px solid hsl(var(--accent) / 0.4) !important;
+  border-radius: 8px !important;
+  padding: 0.625rem 1.25rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  text-transform: none !important;
+  letter-spacing: 0.025em !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.word-button::before,
+button[data-type="word"]::before,
+button[class*="word"]::before,
+.word-btn::before,
+[data-word-button="true"]::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: -100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: linear-gradient(90deg, transparent, hsl(var(--accent) / 0.1), transparent) !important;
+  transition: left 0.5s ease !important;
+}
+
+.word-button:hover,
+button[data-type="word"]:hover,
+button[class*="word"]:hover,
+.word-btn:hover,
+[data-word-button="true"]:hover {
+  background-color: hsl(var(--accent) / 0.25) !important;
+  border-color: hsl(var(--accent)) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.word-button:hover::before,
+button[data-type="word"]:hover::before,
+button[class*="word"]:hover::before,
+.word-btn:hover::before,
+[data-word-button="true"]:hover::before {
+  left: 100% !important;
+}
+
+/* ===== SMOOTH PAGE TRANSITION ANIMATIONS ===== */
+
+/* Page transition container */
+.page-transition-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Page enter animation */
+.page-enter {
+  opacity: 0;
+  transform: translateX(20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Page exit animation */
+.page-exit {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-exit-active {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* Content fade in animation */
+.content-fade-in {
+  animation: contentFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes contentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide in from right animation */
+.slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Slide in from left animation */
+.slide-in-left {
+  animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Scale in animation */
+.scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Page transition overlay */
+.page-transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: hsl(var(--background));
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.page-transition-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Smooth navigation transitions */
+.nav-item,
+.sidebar-nav-item {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.nav-item:hover,
+.sidebar-nav-item:hover {
+  transform: translateX(4px) !important;
+}
+
+.nav-item.active,
+.sidebar-nav-item.active {
+  transform: translateX(8px) !important;
+}
+
+/* Content area transitions */
+.content,
+.main-content {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Card hover animations */
+.card,
+.document-card,
+.model-card {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.card:hover,
+.document-card:hover,
+.model-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ===== ADDITIONAL HIGH-SPECIFICITY STYLES ===== */
+
+/* Force switch visibility with maximum specificity */
+body input[type="checkbox"],
+body input[type="radio"],
+body .switch,
+body .toggle,
+body [data-state="checked"],
+body [role="checkbox"],
+body [role="radio"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  width: 20px !important;
+  height: 20px !important;
+  background-color: hsl(var(--background)) !important;
+  border: 2px solid hsl(var(--border)) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Force dialog visibility */
+body [data-radix-dialog-content],
+body .dialog-content,
+body .modal-content,
+body [role="dialog"],
+body .modal,
+body .dialog,
+body [data-state="open"] {
+  background-color: hsl(var(--card)) !important;
+  border: 2px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 12px !important;
+  padding: 1.5rem !important;
+  z-index: 1000 !important;
+  visibility: visible !important;
+}
+
+/* ===== ADDITIONAL ANIMATION CLASSES ===== */
+
+/* Fade in animation */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Slide up animation */
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Bounce in animation */
+.bounce-in {
+  animation: bounceIn 0.5s ease-out;
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse animation */
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Shake animation */
+.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* ===== ENHANCED HOVER EFFECTS ===== */
+
+/* Enhanced button hover effects */
+.btn:hover,
+button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Enhanced card hover effects */
+.card:hover,
+.document-card:hover,
+.model-card:hover,
+.eda-panel:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Enhanced navigation hover effects */
+.nav-item:hover,
+.sidebar-nav-item:hover {
+  transform: translateX(6px) !important;
+  background-color: hsl(var(--accent) / 0.1) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* ===== SPICE GENERATION SWITCH STYLES ===== */
+
+/* Ensure proper switch behavior and prevent shrinking */
+#include-comments,
+#include-subckt,
+[data-testid="include-comments"],
+[data-testid="include-subckt"] {
+  min-width: 44px !important;
+  min-height: 24px !important;
+  flex-shrink: 0 !important;
+  transition: all 0.2s ease-in-out !important;
+  border-radius: 12px !important;
+}
+
+/* Force green/red colors for SPICE switches */
+#include-comments[data-state="checked"],
+#include-subckt[data-state="checked"],
+[data-testid="include-comments"][data-state="checked"],
+[data-testid="include-subckt"][data-state="checked"] {
+  background-color: rgb(34 197 94) !important; /* green-500 */
+}
+
+#include-comments[data-state="unchecked"],
+#include-subckt[data-state="unchecked"],
+[data-testid="include-comments"][data-state="unchecked"],
+[data-testid="include-subckt"][data-state="unchecked"] {
+  background-color: rgb(239 68 68) !important; /* red-500 */
+}
+
+/* Dark mode colors */
+.dark #include-comments[data-state="checked"],
+.dark #include-subckt[data-state="checked"],
+.dark [data-testid="include-comments"][data-state="checked"],
+.dark [data-testid="include-subckt"][data-state="checked"] {
+  background-color: rgb(22 163 74) !important; /* green-600 */
+}
+
+.dark #include-comments[data-state="unchecked"],
+.dark #include-subckt[data-state="unchecked"],
+.dark [data-testid="include-comments"][data-state="unchecked"],
+.dark [data-testid="include-subckt"][data-state="unchecked"] {
+  background-color: rgb(220 38 38) !important; /* red-600 */
+}
+
+/* Enhanced hover effects for SPICE switches */
+#include-comments:hover,
+#include-subckt:hover,
+[data-testid="include-comments"]:hover,
+[data-testid="include-subckt"]:hover {
+  transform: scale(1.02) !important;
+}
+
+/* Focus states for accessibility */
+#include-comments:focus,
+#include-subckt:focus,
+[data-testid="include-comments"]:focus,
+[data-testid="include-subckt"]:focus {
+  outline: 2px solid hsl(var(--primary)) !important;
+  outline-offset: 2px !important;
+}
+
+/* Ensure thumb maintains round shape and white color */
+#include-comments [data-radix-switch-thumb],
+#include-subckt [data-radix-switch-thumb],
+[data-testid="include-comments"] [data-radix-switch-thumb],
+[data-testid="include-subckt"] [data-radix-switch-thumb] {
+  min-width: 20px !important;
+  min-height: 20px !important;
+  flex-shrink: 0 !important;
+  background-color: white !important;
+  border-radius: 50% !important;
+}

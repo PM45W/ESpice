@@ -1,14 +1,32 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Table, Tbody, Td, Th, Thead, Tr } from '../components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Alert, AlertDescription } from '../components/ui/alert';
-import { Button } from '../components/ui/button';
-import { Switch } from '../components/ui/switch';
-import { Textarea } from '../components/ui/textarea';
-import { Progress } from '../components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { 
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+  Badge,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Alert,
+  AlertDescription,
+  Button,
+  Switch,
+  Textarea,
+  Progress,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from '@espice/ui';
 import { 
   Cpu, 
   Database, 
@@ -393,72 +411,72 @@ const SPICEExtractionIntegrationPage: React.FC = () => {
               <CardContent>
                 {spiceExtractions.length > 0 ? (
                   <Table>
-                    <Thead>
-                      <Tr>
-                        <Th>Model Type</Th>
-                        <Th>Status</Th>
-                        <Th>Progress</Th>
-                        <Th>Confidence</Th>
-                        <Th>Created</Th>
-                        <Th>Actions</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {spiceExtractions.map((extraction) => (
-                        <Tr key={extraction.id}>
-                          <Td>
+                                    <TableHeader>
+                  <TableRow>
+                    <TableHead>Model Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Progress</TableHead>
+                    <TableHead>Confidence</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {spiceExtractions.map((extraction) => (
+                    <TableRow key={extraction.id}>
+                      <TableCell>
                             <div className="model-info">
                               <div className="model-type">{extraction.modelType}</div>
                               <div className="model-format">{extraction.modelFormat}</div>
                             </div>
-                          </Td>
-                          <Td>
-                            <Badge variant={getStatusColor(extraction.status) as any}>
-                              {getStatusIcon(extraction.status)}
-                              {extraction.status}
-                            </Badge>
-                          </Td>
-                          <Td>
-                            <div className="progress-container">
-                              <Progress value={extraction.progress} className="progress-bar" />
-                              <span className="progress-text">{extraction.progress}%</span>
-                            </div>
-                          </Td>
-                          <Td>
-                            <div className="confidence-display">
-                              {Math.round(extraction.mappingConfidence * 100)}%
-                            </div>
-                          </Td>
-                          <Td>{formatDate(extraction.createdAt)}</Td>
-                          <Td>
-                            <div className="action-buttons">
-                              {extraction.status === 'completed' && (
-                                <>
-                                  <Button size="sm" variant="outline">
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                  <Button size="sm" variant="outline">
-                                    <Download className="w-4 h-4" />
-                                  </Button>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    onClick={() => handleCreateVersion(extraction)}
-                                  >
-                                    <History className="w-4 h-4" />
-                                  </Button>
-                                </>
-                              )}
-                              {extraction.status === 'failed' && (
-                                <Button size="sm" variant="outline">
-                                  <RotateCcw className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </Td>
-                        </Tr>
-                      ))}
-                    </Tbody>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusColor(extraction.status) as any}>
+                          {getStatusIcon(extraction.status)}
+                          {extraction.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="progress-container">
+                          <Progress value={extraction.progress} className="progress-bar" />
+                          <span className="progress-text">{extraction.progress}%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="confidence-display">
+                          {Math.round(extraction.mappingConfidence * 100)}%
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatDate(extraction.createdAt)}</TableCell>
+                      <TableCell>
+                        <div className="action-buttons">
+                          {extraction.status === 'completed' && (
+                            <>
+                              <Button size="sm" variant="outline">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Download className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleCreateVersion(extraction)}
+                              >
+                                <History className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                          {extraction.status === 'failed' && (
+                            <Button size="sm" variant="outline">
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
                   </Table>
                 ) : (
                   <div className="empty-state">
@@ -558,22 +576,22 @@ const SPICEExtractionIntegrationPage: React.FC = () => {
               <CardContent>
                 {modelVersions.length > 0 ? (
                   <Table>
-                    <Thead>
-                      <Tr>
-                        <Th>Version</Th>
-                        <Th>Changes</Th>
-                        <Th>Created</Th>
-                        <Th>Created By</Th>
-                        <Th>Actions</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Version</TableHead>
+                        <TableHead>Changes</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Created By</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {modelVersions.map((version) => (
-                        <Tr key={version.id}>
-                          <Td>
+                        <TableRow key={version.id}>
+                          <TableCell>
                             <Badge variant="outline">{version.version}</Badge>
-                          </Td>
-                          <Td>
+                          </TableCell>
+                          <TableCell>
                             <div className="changes-list">
                               {version.changes.map((change, index) => (
                                 <div key={index} className="change-item">
@@ -581,10 +599,10 @@ const SPICEExtractionIntegrationPage: React.FC = () => {
                                 </div>
                               ))}
                             </div>
-                          </Td>
-                          <Td>{formatDate(version.createdAt)}</Td>
-                          <Td>{version.createdBy}</Td>
-                          <Td>
+                          </TableCell>
+                          <TableCell>{formatDate(version.createdAt)}</TableCell>
+                          <TableCell>{version.createdBy}</TableCell>
+                          <TableCell>
                             <div className="action-buttons">
                               <Button size="sm" variant="outline">
                                 <Eye className="w-4 h-4" />
@@ -593,10 +611,10 @@ const SPICEExtractionIntegrationPage: React.FC = () => {
                                 <GitCompare className="w-4 h-4" />
                               </Button>
                             </div>
-                          </Td>
-                        </Tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </Tbody>
+                    </TableBody>
                   </Table>
                 ) : (
                   <div className="empty-state">
@@ -704,6 +722,7 @@ const SPICEExtractionIntegrationPage: React.FC = () => {
                     <div className="options-grid">
                       <div className="option-item">
                         <Switch
+                          id="include-subckt"
                           checked={includeSubcircuit}
                           onCheckedChange={setIncludeSubcircuit}
                         />
@@ -711,6 +730,7 @@ const SPICEExtractionIntegrationPage: React.FC = () => {
                       </div>
                       <div className="option-item">
                         <Switch
+                          id="include-comments"
                           checked={includeComments}
                           onCheckedChange={setIncludeComments}
                         />

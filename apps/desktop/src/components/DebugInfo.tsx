@@ -74,7 +74,7 @@ const DebugInfo: React.FC<DebugInfoProps> = ({ isVisible = true }) => {
       fontFamily: 'Consolas, "Courier New", monospace',
       maxWidth: '380px',
       border: '1px solid #dee2e6',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+
     }}>
       <div 
         style={{ 

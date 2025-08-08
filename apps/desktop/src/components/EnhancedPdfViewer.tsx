@@ -21,35 +21,37 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Progress } from './ui/progress';
-import { Separator } from './ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { 
+  Button, 
+  Input, 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  Badge, 
+  Progress, 
+  Separator, 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger, 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from './ui/select';
-import { 
   Alert,
   AlertDescription,
   AlertTitle,
-} from './ui/alert';
-import { Checkbox } from './ui/checkbox';
-import { Label } from './ui/label';
-import { 
+  Checkbox, 
+  Label, 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+} from '@espice/ui';
 import enhancedPdfService, { 
   PDFProcessingResult, 
   ExtractedImage, 

@@ -1,41 +1,73 @@
-# Architecture Overview
+# ESpice Architecture Overview
 
 ## System Architecture
+ESpice follows a modular architecture with the following components:
 
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ Frontend │ │ Backend │ │ Data Layer │
-│ (React/TS) │◄──►│ (Tauri/Rust) │◄──►│ (SQLite) │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
-│ │ │
-▼ ▼ ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ UI Components │ │ Data Processors│ │ Models │
-│ - File Upload │ │ - PDF Parser │ │ - Products │
-│ - Data Tables │ │ - Image OCR │ │ - Parameters │
-│ - Model View │ │ - SPICE Gen │ │ - Models │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
+### Core Services
+- **PDF Service**: Handles PDF processing and text extraction
+- **Curve Extraction**: Extracts I-V curves from datasheet graphs
+- **SPICE Generation**: Generates SPICE models for semiconductor devices
+- **Data Management**: Manages data storage and retrieval
 
-## Core Modules
+### Applications
+- **Desktop App**: Main Tauri-based desktop application
+- **Web App**: Web-based interface (if needed)
 
-### 1. Data Extraction Engine
-- **PDF Parser**: Extract text and tables from datasheets
-- **Image Processor**: Extract curves from graphs using OpenCV
-- **Data Validator**: Ensure extracted data quality
+### Utilities
+- **Authentication**: User authentication and authorization
+- **Monitoring**: System monitoring and health checks
 
-### 2. SPICE Model Generator
-- **Template Engine**: Use predefined SPICE model templates
-- **Parameter Mapper**: Map extracted data to SPICE parameters
-- **Model Validator**: Verify generated models
+## Technology Stack
 
-### 3. Product Management
-- **Product Database**: Store device information and parameters
-- **Version Control**: Track model versions and changes
-- **Export System**: Generate files for various EDA tools
+### Frontend
+- **React 18.3.1**: UI framework
+- **TypeScript 5.6.2**: Type safety
+- **Vite 6.0.3**: Build tool
+- **Tauri 2**: Desktop app framework
+
+### Backend Services
+- **Python FastAPI**: Service APIs
+- **Rust**: Performance-critical components
+- **Prisma**: Database ORM
+- **SQLite**: Local database
+
+### Core Libraries
+- **PDF.js**: PDF processing
+- **OpenCV**: Image processing
+- **NumPy/SciPy**: Scientific computing
+- **Matplotlib**: Data visualization
 
 ## Data Flow
-1. **Input**: PDF datasheet uploaded
-2. **Parse**: Extract text, tables, and images
-3. **Process**: Identify parameters and values
-4. **Validate**: Check data consistency
-5. **Generate**: Create SPICE model
-6. **Export**: Save to target format
+
+1. **PDF Upload** → PDF Service → Text/Table Extraction
+2. **Image Upload** → Curve Extraction Service → I-V Curves
+3. **Parameters** → SPICE Generation Service → SPICE Models
+4. **All Data** → Data Management Service → Storage
+
+## Service Communication
+
+- **REST APIs**: Service-to-service communication
+- **WebSocket**: Real-time updates
+- **File System**: Local data storage
+- **Database**: Structured data persistence
+
+## Security
+
+- **Local Processing**: All sensitive data processed locally
+- **No Cloud Dependencies**: Complete offline functionality
+- **User Authentication**: Optional user management
+- **Data Encryption**: Sensitive data encryption at rest
+
+## Performance
+
+- **Parallel Processing**: Multi-threaded service execution
+- **Caching**: Intelligent data caching
+- **Lazy Loading**: On-demand resource loading
+- **Memory Management**: Efficient memory usage
+
+## Scalability
+
+- **Microservices**: Independent service scaling
+- **Modular Design**: Easy feature addition/removal
+- **Plugin Architecture**: Extensible functionality
+- **API Versioning**: Backward compatibility

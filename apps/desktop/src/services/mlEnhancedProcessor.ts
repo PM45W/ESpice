@@ -2,11 +2,10 @@ import type {
   PDFProcessingResult, 
   ExtractedTable, 
   ExtractedParameter, 
-  PDFRegion,
-  MLProcessingOptions,
-  OCRResult,
-  TableDetectionResult,
-  ParameterExtractionResult
+  PDFRegion, 
+  ImageData, 
+  OCRWordResult,
+  MLProcessingOptions 
 } from '../types/pdf';
 
 interface MLModelConfig {
@@ -245,18 +244,27 @@ export class MLEnhancedProcessor {
     return results;
   }
 
-  private async enhancedTextExtraction(imageData: ImageData): Promise<OCRResult[]> {
-    const results: OCRResult[] = [];
-    
+  private async enhancedTextExtraction(imageData: ImageData): Promise<OCRWordResult[]> {
+    const results: OCRWordResult[] = [];
+
     try {
-      // Create a canvas to work with the image data
+      // Convert image data to canvas for OCR processing
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to get canvas context');
+      }
+
+      // Create image from data
+      const img = new Image();
+      img.src = URL.createObjectURL(new Blob([imageData.data]));
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+
       canvas.width = imageData.width;
       canvas.height = imageData.height;
-      
-      // Put the image data on the canvas
-      ctx!.putImageData(imageData, 0, 0);
+      ctx.drawImage(img, 0, 0);
       
       // Use tesseract.js if available
       if (this.models.ocr && this.models.ocr.type !== 'enhanced-rule-based') {
@@ -313,7 +321,7 @@ export class MLEnhancedProcessor {
     return results;
   }
 
-  private async enhancedTableDetection(imageData: ImageData, ocrResults: OCRResult[]): Promise<ExtractedTable[]> {
+  private async enhancedTableDetection(imageData: ImageData, ocrResults: OCRWordResult[]): Promise<ExtractedTable[]> {
     const tables: ExtractedTable[] = [];
 
     try {
@@ -342,7 +350,7 @@ export class MLEnhancedProcessor {
     return tables;
   }
 
-  private async enhancedParameterExtraction(ocrResults: OCRResult[], pageNumber: number): Promise<ExtractedParameter[]> {
+  private async enhancedParameterExtraction(ocrResults: OCRWordResult[], pageNumber: number): Promise<ExtractedParameter[]> {
     const parameters: ExtractedParameter[] = [];
     
     try {
@@ -388,12 +396,12 @@ export class MLEnhancedProcessor {
     return parameters;
   }
 
-  private findEnhancedTableCandidates(ocrResults: OCRResult[]): OCRResult[][] {
+  private findEnhancedTableCandidates(ocrResults: OCRWordResult[]): OCRWordResult[][] {
     // Enhanced table candidate detection
-    const candidates: OCRResult[][] = [];
+    const candidates: OCRWordResult[][] = [];
     const lines = this.groupTextByLines(ocrResults);
     
-    let currentCandidate: OCRResult[] = [];
+    let currentCandidate: OCRWordResult[] = [];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -427,7 +435,7 @@ export class MLEnhancedProcessor {
     return tableIndicators.some(indicator => indicator.test(text));
   }
 
-  private extractEnhancedTableStructure(candidate: OCRResult[]): any {
+  private extractEnhancedTableStructure(candidate: OCRWordResult[]): any {
     const lines = this.groupTextByLines(candidate);
     
     if (lines.length < 2) return null;
@@ -452,8 +460,8 @@ export class MLEnhancedProcessor {
     return 'other';
   }
 
-  private groupTextByLines(ocrResults: OCRResult[]): OCRResult[][] {
-    const lines: OCRResult[][] = [];
+  private groupTextByLines(ocrResults: OCRWordResult[]): OCRWordResult[][] {
+    const lines: OCRWordResult[][] = [];
     const tolerance = 10;
 
     ocrResults.forEach(result => {

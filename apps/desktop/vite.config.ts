@@ -16,6 +16,7 @@ export default defineConfig({
       "@/utils": path.resolve(__dirname, "./src/utils"),
       "@/hooks": path.resolve(__dirname, "./src/hooks"),
       "@/lib": path.resolve(__dirname, "./src/lib"),
+      "@espice/ui": path.resolve(__dirname, "../../packages/ui/src"),
     },
   },
 

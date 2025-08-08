@@ -1,0 +1,366 @@
+.enhanced-graph-viewer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.enhanced-graph-viewer:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.enhanced-graph-viewer .graph-svg {
+  max-width: 100%;
+  height: auto;
+  background: hsl(var(--background));
+  border-radius: 6px;
+  overflow: visible;
+}
+
+.enhanced-graph-viewer .graph-svg text {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.enhanced-graph-viewer .graph-svg .curves path {
+  transition: stroke-width 0.2s ease, opacity 0.2s ease;
+}
+
+.enhanced-graph-viewer .graph-svg .curves path:hover {
+  stroke-width: 3;
+  opacity: 1;
+}
+
+.enhanced-graph-viewer .graph-svg .curves circle {
+  transition: r 0.2s ease, opacity 0.2s ease;
+  cursor: pointer;
+  stroke: none; /* Remove any stroke/border */
+}
+
+.enhanced-graph-viewer .graph-svg .curves circle:hover {
+  r: 3;
+  opacity: 1;
+  stroke: none; /* Ensure no stroke on hover */
+}
+
+.enhanced-graph-viewer .graph-svg .legend {
+  transition: opacity 0.3s ease;
+}
+
+.enhanced-graph-viewer .graph-svg .legend:hover {
+  opacity: 1;
+}
+
+.enhanced-graph-viewer .graph-svg .axes line {
+  stroke: hsl(var(--foreground));
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.enhanced-graph-viewer .graph-svg .axis-labels text {
+  fill: hsl(var(--foreground));
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+
+.enhanced-graph-viewer .graph-svg .grid-lines line {
+  stroke: hsl(var(--border));
+  stroke-width: 0.5;
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
+}
+
+.enhanced-graph-viewer:hover .graph-svg .grid-lines line {
+  opacity: 0.4;
+}
+
+/* Empty state styling */
+.enhanced-graph-viewer.empty {
+  min-height: 400px;
+  background: hsl(var(--muted) / 0.1);
+  border: 2px dashed hsl(var(--border));
+  box-shadow: none;
+}
+
+.enhanced-graph-viewer.empty:hover {
+  box-shadow: none;
+  border-color: hsl(var(--muted-foreground));
+}
+
+.enhanced-graph-viewer .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+  gap: 16px;
+}
+
+.enhanced-graph-viewer .empty-state svg {
+  opacity: 0.5;
+}
+
+.enhanced-graph-viewer .empty-state p {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .enhanced-graph-viewer {
+    padding: 12px;
+  }
+  
+  .enhanced-graph-viewer .graph-svg {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .enhanced-graph-viewer .graph-svg text {
+    font-size: 10px;
+  }
+  
+  .enhanced-graph-viewer .graph-svg .legend {
+    transform: scale(0.8);
+    transform-origin: top right;
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  .enhanced-graph-viewer {
+    background: hsl(var(--background));
+    border-color: hsl(var(--border));
+  }
+  
+  .enhanced-graph-viewer .graph-svg {
+    background: hsl(var(--background));
+  }
+  
+  .enhanced-graph-viewer .graph-svg .grid-lines line {
+    stroke: hsl(var(--border));
+    opacity: 0.2;
+  }
+  
+  .enhanced-graph-viewer:hover .graph-svg .grid-lines line {
+    opacity: 0.3;
+  }
+}
+
+/* Animation for curve loading */
+.enhanced-graph-viewer .graph-svg .curves path {
+  animation: curveFadeIn 0.6s ease-out;
+}
+
+@keyframes curveFadeIn {
+  from {
+    opacity: 0;
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+  }
+  to {
+    opacity: 0.9;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Enhanced legend styling */
+.enhanced-graph-viewer .graph-svg .legend rect {
+  fill: hsl(var(--background));
+  stroke: hsl(var(--border));
+  stroke-width: 1;
+  rx: 6;
+  ry: 6;
+  opacity: 0.95;
+  backdrop-filter: blur(8px);
+}
+
+.enhanced-graph-viewer .graph-svg .legend text {
+  font-size: 12px;
+  font-weight: 500;
+  fill: hsl(var(--foreground));
+  text-anchor: start;
+}
+
+.enhanced-graph-viewer .graph-svg .legend line {
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* Professional grid styling */
+.enhanced-graph-viewer .graph-svg .grid-lines {
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.enhanced-graph-viewer:hover .graph-svg .grid-lines {
+  opacity: 0.4;
+}
+
+/* Enhanced axis styling */
+.enhanced-graph-viewer .graph-svg .axes line {
+  stroke: hsl(var(--foreground));
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.8;
+}
+
+.enhanced-graph-viewer .graph-svg .axis-labels text {
+  font-size: 12px;
+  font-weight: 500;
+  fill: hsl(var(--muted-foreground));
+  text-anchor: middle;
+}
+
+/* Title styling */
+.enhanced-graph-viewer .graph-svg text[text-anchor="middle"] {
+  font-size: 16px;
+  font-weight: 600;
+  fill: hsl(var(--foreground));
+  letter-spacing: 0.025em;
+}
+
+/* Enhanced curve styling for semiconductor graphs */
+.enhanced-graph-viewer .graph-svg .curves path[stroke="#FF0000"] {
+  stroke: #FF0000;
+  stroke-width: 2.5;
+}
+
+.enhanced-graph-viewer .graph-svg .curves path[stroke="#0000FF"] {
+  stroke: #0000FF;
+  stroke-width: 2.5;
+}
+
+.enhanced-graph-viewer .graph-svg .curves path[stroke="#00FF00"] {
+  stroke: #00FF00;
+  stroke-width: 2.5;
+}
+
+.enhanced-graph-viewer .graph-svg .curves path[stroke="#FFFF00"] {
+  stroke: #FFFF00;
+  stroke-width: 2.5;
+}
+
+.enhanced-graph-viewer .graph-svg .curves path[stroke="#00FFFF"] {
+  stroke: #00FFFF;
+  stroke-width: 2.5;
+}
+
+.enhanced-graph-viewer .graph-svg .curves path[stroke="#FF00FF"] {
+  stroke: #FF00FF;
+  stroke-width: 2.5;
+}
+
+/* Enhanced data point styling */
+.enhanced-graph-viewer .graph-svg .curves circle {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  stroke: none !important; /* Remove any stroke/border */
+  stroke-width: 0 !important; /* Ensure no stroke width */
+}
+
+.enhanced-graph-viewer .graph-svg .curves circle:hover {
+  r: 4;
+  stroke: none !important; /* Remove white stroke on hover */
+  stroke-width: 0 !important; /* Ensure no stroke width */
+  opacity: 1;
+}
+
+/* Force color display for data points */
+.enhanced-graph-viewer .graph-svg .curves circle[style*="fill"] {
+  fill: inherit !important;
+  stroke: none !important;
+}
+
+.enhanced-graph-viewer .graph-svg .curves path[style*="stroke"] {
+  stroke: inherit !important;
+}
+
+.enhanced-graph-viewer .graph-svg .legend line[style*="stroke"] {
+  stroke: inherit !important;
+}
+
+/* Override any conflicting styles */
+.enhanced-graph-viewer .graph-svg .curves circle {
+  fill: var(--curve-color, #FF6B6B) !important;
+  stroke: none !important;
+  stroke-width: 0 !important;
+}
+
+.enhanced-graph-viewer .graph-svg .curves path {
+  stroke: var(--curve-color, #FF6B6B) !important;
+}
+
+/* Specific curve styling with high specificity */
+.enhanced-graph-viewer .graph-svg .curves[style*="--curve-color"] circle {
+  fill: var(--curve-color) !important;
+  stroke: none !important;
+}
+
+.enhanced-graph-viewer .graph-svg .curves[style*="--curve-color"] path {
+  stroke: var(--curve-color) !important;
+}
+
+/* Force color display for data points with data attributes */
+.enhanced-graph-viewer .graph-svg .curves circle[data-curve-color] {
+  fill: attr(data-curve-color) !important;
+  stroke: none !important;
+}
+
+/* Ensure no other styles override our colors */
+.enhanced-graph-viewer .graph-svg .curves circle[style*="fill"] {
+  fill: inherit !important;
+  stroke: none !important;
+}
+
+.enhanced-graph-viewer .graph-svg .curves path[style*="stroke"] {
+  stroke: inherit !important;
+}
+
+.enhanced-graph-viewer .graph-svg .legend line[style*="stroke"] {
+  stroke: inherit !important;
+}
+
+/* Professional shadow effects */
+.enhanced-graph-viewer .graph-svg filter feDropShadow {
+  flood-color: hsl(var(--foreground));
+  flood-opacity: 0.1;
+}
+
+/* Enhanced accessibility */
+.enhanced-graph-viewer .graph-svg .curves path:focus,
+.enhanced-graph-viewer .graph-svg .curves circle:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .enhanced-graph-viewer {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+  
+  .enhanced-graph-viewer .graph-svg {
+    background: white;
+  }
+  
+  .enhanced-graph-viewer .graph-svg .curves path {
+    stroke-width: 1.5;
+  }
+  
+  .enhanced-graph-viewer .graph-svg .curves circle {
+    r: 1.5;
+  }
+} 

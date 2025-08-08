@@ -21,13 +21,21 @@ import {
   Clock,
   Settings
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Progress } from './ui/progress';
-import { Badge } from './ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Separator } from './ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { ScrollArea } from './ui/scroll-area';
+import { 
+  Button, 
+  Progress, 
+  Badge, 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  Separator, 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger, 
+  ScrollArea 
+} from '@espice/ui';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';

@@ -1,0 +1,149 @@
+{
+  "timestamp": "2025-07-29T10:05:52.248486",
+  "url": "https://www.infineon.com/products/power/gallium-nitride/gallium-nitride-transistor",
+  "total_products": 10,
+  "datasheets_downloaded": 0,
+  "errors": [],
+  "products": [
+    {
+      "part_number": "gan-smart",
+      "name": "GaN smart",
+      "description": "CoolGaN™ Smart Sense is a family of GaN transistors with integrated current sensing.",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/gan-smart",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 65.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:05:28.447800"
+    },
+    {
+      "part_number": "gan-with-integrated-driver",
+      "name": "GaN with integrated driver",
+      "description": "GaN transistors with integrated gate drivers and current sense",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/gan-with-integrated-driver",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:05:30.788973"
+    },
+    {
+      "part_number": "gallium-nitride-transistor",
+      "name": "GaN トランジスタ (GaN HEMT)",
+      "description": "Learn more about our GaN HEMT Solutions - CoolGaN™ Transistors Offer the Highest Performance and the Most Reliable Solution on the Market",
+      "product_url": "https://www.infineon.com/ja/products/power/gallium-nitride/gallium-nitride-transistor",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:05:33.868206"
+    },
+    {
+      "part_number": "gan-transistors-gan-hemts",
+      "name": "GaN transistors (GaN HEMTs) Products",
+      "description": "GaN transistors GaN HEMTs Products | Infineon Technologies",
+      "product_url": "https://www.infineon.com/product-table/gan-transistors-gan-hemts",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:05:36.228244"
+    },
+    {
+      "part_number": "medium-voltage-gan-bidirectional-switches",
+      "name": "Medium-voltage GaN bidirectional switches",
+      "description": "CoolGaN™ BDS 40 V G3 - monolithic bidirectional switches based on GaN technology",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/gan-bidirectional-switches/medium-voltage-gan-bidirectional-switches",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 40.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:05:38.571405"
+    },
+    {
+      "part_number": "gan-bidirectional-switches",
+      "name": "GaN bidirectional switches",
+      "description": "Learn more about GaN Bidirectional Switches (BDS)",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/gan-bidirectional-switches",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:05:40.871472"
+    },
+    {
+      "part_number": "gallium-nitride",
+      "name": "Gallium nitride (GaN)",
+      "description": "Explore Gallium Nitride - offering discrete and integrated GaN solutions that deliver top efficiency and power density for various applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:05:43.079722"
+    },
+    {
+      "part_number": "gallium-nitride-transistor",
+      "name": "GaN transistors (GaN HEMTs)",
+      "description": "Learn more about our GaN HEMT Solutions - CoolGaN™ Transistors Offer the Highest Performance and the Most Reliable Solution on the Market",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/gallium-nitride-transistor",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:05:45.204696"
+    },
+    {
+      "part_number": "gan-controllers",
+      "name": "GaN controllers",
+      "description": "Increased power density, smaller footprints and reduced BOM costs are enabled by the advanced features of the Infineon GaN controller devices",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/gan-controllers",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:05:47.915930"
+    },
+    {
+      "part_number": "coolgan-simulation-tool-plecs",
+      "name": "CoolGaN™ Simulation Tool (PLECS)",
+      "description": "Find answers or ask questions. Connect with engineers across the globe, help solve technical challenges, and share knowledge with each other.",
+      "product_url": "https://www.infineon.com/design-resources/simulation-modeling/coolgan-simulation-tool-plecs",
+      "datasheet_url": null,
+      "specifications": {
+        "voltage_rating": 1200.0,
+        "current_rating": 70.0,
+        "power_rating": 9.0,
+        "package_type": "to-buy"
+      },
+      "scraped_at": "2025-07-29T10:05:50.240764"
+    }
+  ]
+}

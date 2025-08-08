@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useState, useEffect } from 'react'
 import Layout from './components/Layout'
-import LoadingSpinner from './components/ui/LoadingSpinner'
+import { LoadingSpinner } from '@espice/ui'
 import ErrorBoundary from './components/ErrorBoundary'
 
 // Lazy load pages for better performance
@@ -9,6 +9,7 @@ const ProductManagementPage = lazy(() => import('./pages/ProductManagementPage')
 const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'))
 const SPICEGenerationPage = lazy(() => import('./pages/SPICEGenerationPage'))
 const GraphExtractionPage = lazy(() => import('./pages/GraphExtractionPage'))
+const GraphExtractionResultPage = lazy(() => import('./pages/GraphExtractionResultPage'))
 // Removed separate integration pages - now integrated into ProductManagementPage
 
 // Placeholder components for coming soon pages
@@ -64,6 +65,8 @@ function App() {
           setServiceError={setServiceError}
           setOnServiceRetry={setOnServiceRetry}
         />
+      case '/graph-extraction/result':
+        return <GraphExtractionResultPage />
       case '/product-management':
         return <ProductManagementPage />
       case '/spice-gen':

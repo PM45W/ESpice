@@ -200,17 +200,58 @@ export class CurveExtractionService {
   ): Promise<CurveExtractionResult> {
     console.log('Starting curve extraction with FastAPI service...');
     
+    // Auto-detect graph type and set appropriate preset for better offset calculation
+    this.autoDetectGraphPreset(config);
+    console.log(`Auto-detected graph preset: ${this.getGraphPreset()}`);
+    
     // Check if FastAPI service is available
     if (!(await this.isFastApiAvailable())) {
       throw new Error('FastAPI curve extraction service is not available. Please start the service first with: ./scripts/start-curve-extraction-service.ps1');
     }
     
+    // Set default mode to optimized if not specified
+    const configWithDefaults = {
+      ...config,
+      mode: config.mode || 'optimized' as const
+    };
+    
     try {
       console.log('Using FastAPI curve extraction service for curve extraction');
-      return await this.extractCurvesFastApi(imageData, selectedColors, config);
+      return await this.extractCurvesFastApi(imageData, selectedColors, configWithDefaults);
     } catch (error) {
       console.error('FastAPI curve extraction failed:', error);
       throw new Error(`Curve extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please ensure the FastAPI service is running.`);
+    }
+  }
+
+  // New method for optimized extraction (recommended)
+  async extractCurvesOptimized(
+    imageData: Uint8Array,
+    selectedColors: string[],
+    config: GraphConfig
+  ): Promise<CurveExtractionResult> {
+    console.log('Starting optimized curve extraction...');
+    console.log('Selected colors:', selectedColors);
+    console.log('Config:', config);
+    
+    // Auto-detect graph type and set appropriate preset for better offset calculation
+    this.autoDetectGraphPreset(config);
+    console.log(`Auto-detected graph preset: ${this.getGraphPreset()}`);
+    
+    // Check if FastAPI service is available
+    if (!(await this.isFastApiAvailable())) {
+      throw new Error('FastAPI curve extraction service is not available. Please start the service first with: ./scripts/start-curve-extraction-service.ps1');
+    }
+    
+    // Override config to use optimized mode
+    const optimizedConfig = { ...config, mode: 'optimized' as const };
+    
+    try {
+      console.log('Using FastAPI optimized curve extraction service');
+      return await this.extractCurvesFastApi(imageData, selectedColors, optimizedConfig);
+    } catch (error) {
+      console.error('FastAPI optimized curve extraction failed:', error);
+      throw new Error(`Optimized curve extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please ensure the FastAPI service is running.`);
     }
   }
 
@@ -222,6 +263,10 @@ export class CurveExtractionService {
   ): Promise<CurveExtractionResult> {
     try {
       const startTime = performance.now();
+      
+      // Auto-detect graph type and set appropriate preset for better offset calculation
+      this.autoDetectGraphPreset(config);
+      console.log(`Auto-detected graph preset for web extraction: ${this.getGraphPreset()}`);
       
       // Create a blob from the image data
       const blob = new Blob([imageData], { type: 'image/png' });
@@ -472,8 +517,8 @@ export class CurveExtractionService {
         
         if (matchesColor) {
           // Convert pixel coordinates to logical coordinates
-          const logicalX = this.pixelToLogicalXImproved(x, width, config);
-          const logicalY = this.pixelToLogicalYImproved(y, height, config);
+          const logicalX = this.pixelToLogicalXImproved(x, width, height, config, data);
+          const logicalY = this.pixelToLogicalYImproved(y, width, height, config, data);
           
           // Only add if coordinates are within valid range
           if (this.isValidCoordinate(logicalX, logicalY, config)) {
@@ -547,27 +592,610 @@ export class CurveExtractionService {
     return hMatch && s >= range.sMin && v >= range.vMin && v <= range.vMax;
   }
 
-  // Improved coordinate conversion
-  private pixelToLogicalXImproved(pixelX: number, width: number, config: GraphConfig): number {
+  // Hard-coded axis offset values to fix gap issues
+  private readonly HARDCODED_OFFSETS = {
+    // Standard offsets for typical graph layouts
+    marginLeft: 80,    // Y-axis offset from left edge
+    marginRight: 40,   // Right margin
+    marginTop: 40,     // Top margin
+    marginBottom: 60,  // X-axis offset from bottom edge
+    
+    // Alternative offsets for different graph types
+    alternative: {
+      marginLeft: 100,   // For graphs with more labels
+      marginRight: 30,   // Smaller right margin
+      marginTop: 50,     // More top space for title
+      marginBottom: 80   // More bottom space for labels
+    },
+    
+    // Preset configurations for different graph types
+    presets: {
+      // For SPICE transistor curves (VDS vs ID)
+      spice: {
+        marginLeft: 90,    // More space for VDS labels
+        marginRight: 35,   // Standard right margin
+        marginTop: 45,     // Space for title
+        marginBottom: 70   // More space for ID labels
+      },
+      
+      // For datasheet graphs with dense labels
+      datasheet: {
+        marginLeft: 110,   // Extra space for axis labels
+        marginRight: 25,   // Minimal right margin
+        marginTop: 60,     // Space for graph title
+        marginBottom: 85   // Space for x-axis labels
+      },
+      
+      // For simple line graphs
+      simple: {
+        marginLeft: 70,    // Minimal left margin
+        marginRight: 45,   // Standard right margin
+        marginTop: 35,     // Minimal top margin
+        marginBottom: 55   // Standard bottom margin
+      },
+      
+      // For graphs with no axis labels (minimal margins)
+      minimal: {
+        marginLeft: 50,    // Minimal left margin
+        marginRight: 50,   // Minimal right margin
+        marginTop: 30,     // Minimal top margin
+        marginBottom: 40   // Minimal bottom margin
+      },
+      
+      // For EPC2040 output characteristics curves (Figure 1-9)
+      epc2040_output: {
+        marginLeft: 85,    // Space for ID labels (0-27.5A)
+        marginRight: 30,   // Minimal right margin
+        marginTop: 50,     // Space for title
+        marginBottom: 75   // Space for VDS labels (0-3V)
+      }
+    }
+  };
+
+  // User-adjustable offset overrides
+  private userOffsetOverrides: {
+    marginLeft?: number;
+    marginRight?: number;
+    marginTop?: number;
+    marginBottom?: number;
+  } = {};
+
+  // Current graph type preset
+  private currentGraphPreset: 'standard' | 'spice' | 'datasheet' | 'simple' | 'minimal' | 'epc2040_output' = 'standard';
+
+  // Set graph type preset for better offset calculation
+  setGraphPreset(preset: 'standard' | 'spice' | 'datasheet' | 'simple' | 'minimal' | 'epc2040_output'): void {
+    this.currentGraphPreset = preset;
+    console.log(`Graph preset set to: ${preset}`);
+  }
+
+  // Get current graph preset
+  getGraphPreset(): 'standard' | 'spice' | 'datasheet' | 'simple' | 'minimal' | 'epc2040_output' {
+    return this.currentGraphPreset;
+  }
+
+  // Auto-detect graph type and set appropriate preset
+  autoDetectGraphPreset(config: GraphConfig): void {
+    // Check if this looks like EPC2040 output characteristics
+    if (this.isEPC2040OutputCharacteristics(config)) {
+      this.setGraphPreset('epc2040_output');
+      return;
+    }
+    
+    // Check if this looks like a SPICE transistor curve
+    if (this.isSpiceTransistorCurve(config)) {
+      this.setGraphPreset('spice');
+      return;
+    }
+    
+    // Check if this looks like a datasheet graph
+    if (this.isDatasheetGraph(config)) {
+      this.setGraphPreset('datasheet');
+      return;
+    }
+    
+    // Check if this is a simple line graph
+    if (this.isSimpleLineGraph(config)) {
+      this.setGraphPreset('simple');
+      return;
+    }
+    
+    // Default to standard
+    this.setGraphPreset('standard');
+  }
+
+  // Detect if this is a SPICE transistor curve
+  private isSpiceTransistorCurve(config: GraphConfig): boolean {
+    // SPICE curves typically have VDS on X-axis and ID on Y-axis
+    const xAxisName = config.x_axis_name?.toLowerCase() || '';
+    const yAxisName = config.y_axis_name?.toLowerCase() || '';
+    
+    return (
+      (xAxisName.includes('vds') || xAxisName.includes('v_ds') || xAxisName.includes('drain-source')) &&
+      (yAxisName.includes('id') || yAxisName.includes('i_d') || yAxisName.includes('drain current'))
+    );
+  }
+
+  // Detect if this is EPC2040 output characteristics curve
+  private isEPC2040OutputCharacteristics(config: GraphConfig): boolean {
+    // EPC2040 output characteristics have specific ranges and axis names
+    const xAxisName = config.x_axis_name?.toLowerCase() || '';
+    const yAxisName = config.y_axis_name?.toLowerCase() || '';
+    
+    // Check for VDS range 0-3V and ID range 0-27.5A
+    const hasCorrectXRange = config.x_min === 0 && config.x_max === 3;
+    const hasCorrectYRange = config.y_min === 0 && config.y_max === 27.5;
+    
+    // Check for VDS and ID axis names
+    const hasVDSAxis = xAxisName.includes('vds') || xAxisName.includes('v_ds') || xAxisName.includes('drain-source voltage');
+    const hasIDAxis = yAxisName.includes('id') || yAxisName.includes('i_d') || yAxisName.includes('drain current');
+    
+    // Check for linear scales
+    const hasLinearScales = config.x_scale_type === 'linear' && config.y_scale_type === 'linear';
+    
+    return hasCorrectXRange && hasCorrectYRange && hasVDSAxis && hasIDAxis && hasLinearScales;
+  }
+
+  // Detect if this is a datasheet graph
+  private isDatasheetGraph(config: GraphConfig): boolean {
+    // Datasheet graphs typically have more detailed labels and wider ranges
+    const hasDetailedLabels = config.x_axis_name && config.y_axis_name;
+    const hasWideRange = (config.x_max - config.x_min) > 100 || (config.y_max - config.y_min) > 100;
+    
+    return hasDetailedLabels && hasWideRange;
+  }
+
+  // Detect if this is a simple line graph
+  private isSimpleLineGraph(config: GraphConfig): boolean {
+    // Simple line graphs typically have smaller ranges and basic labels
+    const hasBasicLabels = !config.x_axis_name || !config.y_axis_name;
+    const hasSmallRange = (config.x_max - config.x_min) < 50 && (config.y_max - config.y_min) < 50;
+    
+    return hasBasicLabels || hasSmallRange;
+  }
+
+  // Set user-defined offset overrides
+  setOffsetOverrides(overrides: {
+    marginLeft?: number;
+    marginRight?: number;
+    marginTop?: number;
+    marginBottom?: number;
+  }): void {
+    this.userOffsetOverrides = { ...this.userOffsetOverrides, ...overrides };
+    console.log('Offset overrides updated:', this.userOffsetOverrides);
+  }
+
+  // Reset offset overrides to defaults
+  resetOffsetOverrides(): void {
+    this.userOffsetOverrides = {};
+    console.log('Offset overrides reset to defaults');
+  }
+
+  // Get current offset overrides
+  getOffsetOverrides(): {
+    marginLeft?: number;
+    marginRight?: number;
+    marginTop?: number;
+    marginBottom?: number;
+  } {
+    return { ...this.userOffsetOverrides };
+  }
+
+  // Create EPC2040 output characteristics configuration
+  createEPC2040OutputConfig(): GraphConfig {
+    return {
+      x_axis_name: 'VDS',
+      y_axis_name: 'ID',
+      x_min: 0,
+      x_max: 3,
+      y_min: 0,
+      y_max: 27.5,
+      x_scale_type: 'linear',
+      y_scale_type: 'linear',
+      x_scale: 1,
+      y_scale: 1,
+      title: 'EPC2040 Output Characteristics at 25°C',
+      description: 'Drain Current vs Drain-Source Voltage for different Gate-Source Voltages'
+    };
+  }
+
+  // Create EPC2040 transfer characteristics configuration
+  createEPC2040TransferConfig(): GraphConfig {
+    return {
+      x_axis_name: 'VGS',
+      y_axis_name: 'ID',
+      x_min: 0,
+      x_max: 6,
+      y_min: 0,
+      y_max: 30,
+      x_scale_type: 'linear',
+      y_scale_type: 'linear',
+      x_scale: 1,
+      y_scale: 1,
+      title: 'EPC2040 Transfer Characteristics at 25°C',
+      description: 'Drain Current vs Gate-Source Voltage'
+    };
+  }
+
+  // Create EPC2040 on-resistance configuration
+  createEPC2040OnResistanceConfig(): GraphConfig {
+    return {
+      x_axis_name: 'ID',
+      y_axis_name: 'RDS(on)',
+      x_min: 0,
+      x_max: 3.4,
+      y_min: 0,
+      y_max: 50,
+      x_scale_type: 'linear',
+      y_scale_type: 'linear',
+      x_scale: 1,
+      y_scale: 1,
+      title: 'EPC2040 On-Resistance vs Drain Current',
+      description: 'Drain-Source On-Resistance vs Drain Current'
+    };
+  }
+
+  // Create EPC2040 gate charge configuration
+  createEPC2040GateChargeConfig(): GraphConfig {
+    return {
+      x_axis_name: 'VGS',
+      y_axis_name: 'QG',
+      x_min: 0,
+      x_max: 6,
+      y_min: 0,
+      y_max: 1000,
+      x_scale_type: 'linear',
+      y_scale_type: 'linear',
+      x_scale: 1,
+      y_scale: 1,
+      title: 'EPC2040 Gate Charge vs Gate-Source Voltage',
+      description: 'Total Gate Charge vs Gate-Source Voltage'
+    };
+  }
+
+  // Create EPC2040 capacitance configuration
+  createEPC2040CapacitanceConfig(): GraphConfig {
+    return {
+      x_axis_name: 'VDS',
+      y_axis_name: 'C',
+      x_min: 0,
+      x_max: 15,
+      y_min: 0,
+      y_max: 200,
+      x_scale_type: 'linear',
+      y_scale_type: 'linear',
+      x_scale: 1,
+      y_scale: 1,
+      title: 'EPC2040 Capacitance vs Drain-Source Voltage',
+      description: 'Input, Output, and Reverse Transfer Capacitance vs VDS'
+    };
+  }
+
+  // Create EPC2040 switching characteristics configuration
+  createEPC2040SwitchingConfig(): GraphConfig {
+    return {
+      x_axis_name: 'Time',
+      y_axis_name: 'V/I',
+      x_min: 0,
+      x_max: 100,
+      y_min: 0,
+      y_max: 20,
+      x_scale_type: 'linear',
+      y_scale_type: 'linear',
+      x_scale: 1,
+      y_scale: 1,
+      title: 'EPC2040 Switching Characteristics',
+      description: 'Turn-on and Turn-off Switching Waveforms'
+    };
+  }
+
+  // Create EPC2040 thermal characteristics configuration
+  createEPC2040ThermalConfig(): GraphConfig {
+    return {
+      x_axis_name: 'Temperature',
+      y_axis_name: 'RDS(on)',
+      x_min: -40,
+      x_max: 150,
+      y_min: 0,
+      y_max: 100,
+      x_scale_type: 'linear',
+      y_scale_type: 'linear',
+      x_scale: 1,
+      y_scale: 1,
+      title: 'EPC2040 On-Resistance vs Temperature',
+      description: 'Drain-Source On-Resistance vs Junction Temperature'
+    };
+  }
+
+  // Get EPC2040 color mapping for VGS curves
+  getEPC2040ColorMapping(): Record<string, string> {
+    return {
+      'red': '5V',
+      'green': '4V', 
+      'yellow': '3V',
+      'blue': '2V'
+    };
+  }
+
+  // Get all EPC2040 graph configurations
+  getAllEPC2040Configs(): Record<string, GraphConfig> {
+    return {
+      'output_characteristics': this.createEPC2040OutputConfig(),
+      'transfer_characteristics': this.createEPC2040TransferConfig(),
+      'on_resistance': this.createEPC2040OnResistanceConfig(),
+      'gate_charge': this.createEPC2040GateChargeConfig(),
+      'capacitance': this.createEPC2040CapacitanceConfig(),
+      'switching': this.createEPC2040SwitchingConfig(),
+      'thermal': this.createEPC2040ThermalConfig()
+    };
+  }
+
+  // Create EPC2040 safe operating area configuration
+  createEPC2040SOAConfig(): GraphConfig {
+    return {
+      x_axis_name: 'VDS',
+      y_axis_name: 'ID',
+      x_min: 0,
+      x_max: 15,
+      y_min: 0,
+      y_max: 10,
+      x_scale_type: 'linear',
+      y_scale_type: 'linear',
+      x_scale: 1,
+      y_scale: 1,
+      title: 'EPC2040 Safe Operating Area',
+      description: 'Safe Operating Area - Drain Current vs Drain-Source Voltage'
+    };
+  }
+
+  // Create EPC2040 body diode characteristics configuration
+  createEPC2040BodyDiodeConfig(): GraphConfig {
+    return {
+      x_axis_name: 'ISD',
+      y_axis_name: 'VSD',
+      x_min: 0,
+      x_max: 5,
+      y_min: 0,
+      y_max: 3,
+      x_scale_type: 'linear',
+      y_scale_type: 'linear',
+      x_scale: 1,
+      y_scale: 1,
+      title: 'EPC2040 Body Diode Characteristics',
+      description: 'Source-Drain Forward Voltage vs Source-Drain Current'
+    };
+  }
+
+  // Enhanced coordinate conversion with hard-coded offsets
+  private pixelToLogicalXImproved(pixelX: number, width: number, height: number, config: GraphConfig, imageData?: Uint8ClampedArray): number {
+    // Use hard-coded offsets instead of dynamic detection for consistent results
+    const offsets = this.getHardcodedOffsets(width, height);
+    const { marginLeft, marginRight } = offsets;
+    const graphWidth = width - marginLeft - marginRight;
+    
+    // Debug logging (only in development)
+    if (process.env.NODE_ENV === 'development' && pixelX === 0) {
+      console.log('Using hard-coded offsets:', { marginLeft, marginRight, graphWidth, width, height });
+    }
+    
+    // Adjust pixel position relative to graph area with hard-coded offset
+    const adjustedPixelX = Math.max(0, pixelX - marginLeft);
+    const normalizedX = Math.min(1, adjustedPixelX / graphWidth);
+    
     if (config.x_scale_type === 'linear') {
-      return pixelX * (config.x_max - config.x_min) / width + config.x_min;
+      return normalizedX * (config.x_max - config.x_min) + config.x_min;
     } else {
-      const f = pixelX / width;
-      const logX = Math.log(Math.max(config.x_min, 0.001)) + f * (Math.log(config.x_max) - Math.log(Math.max(config.x_min, 0.001)));
+      const logX = Math.log(Math.max(config.x_min, 0.001)) + 
+                   normalizedX * (Math.log(config.x_max) - Math.log(Math.max(config.x_min, 0.001)));
       return Math.exp(logX);
     }
   }
 
-  private pixelToLogicalYImproved(pixelY: number, height: number, config: GraphConfig): number {
+  private pixelToLogicalYImproved(pixelY: number, width: number, height: number, config: GraphConfig, imageData?: Uint8ClampedArray): number {
+    // Use hard-coded offsets instead of dynamic detection for consistent results
+    const offsets = this.getHardcodedOffsets(width, height);
+    const { marginTop, marginBottom } = offsets;
+    const graphHeight = height - marginTop - marginBottom;
+    
+    // Adjust pixel position relative to graph area and invert Y-axis with hard-coded offset
+    const adjustedPixelY = Math.max(0, height - pixelY - marginBottom);
+    const normalizedY = Math.min(1, adjustedPixelY / graphHeight);
+    
     if (config.y_scale_type === 'linear') {
-      // Enhanced Y-coordinate transformation with proper axis inversion
-      // Invert Y-axis: top of image (y=0) corresponds to y_max, bottom (y=height) corresponds to y_min
-      return (height - pixelY) * (config.y_max - config.y_min) / height + config.y_min;
+      return normalizedY * (config.y_max - config.y_min) + config.y_min;
     } else {
-      const f = (height - pixelY) / height;
-      const logY = Math.log(Math.max(config.y_min, 0.001)) + f * (Math.log(config.y_max) - Math.log(Math.max(config.y_min, 0.001)));
+      const logY = Math.log(Math.max(config.y_min, 0.001)) + 
+                   normalizedY * (Math.log(config.y_max) - Math.log(Math.max(config.y_min, 0.001)));
       return Math.exp(logY);
     }
+  }
+
+  // Get hard-coded offsets based on image size and graph type
+  private getHardcodedOffsets(width: number, height: number): {
+    marginLeft: number;
+    marginRight: number;
+    marginTop: number;
+    marginBottom: number;
+  } {
+    let baseOffsets;
+    
+    // Use preset configurations based on current graph type
+    if (this.currentGraphPreset !== 'standard' && this.HARDCODED_OFFSETS.presets[this.currentGraphPreset]) {
+      const preset = this.HARDCODED_OFFSETS.presets[this.currentGraphPreset];
+      
+      // For EPC2040 output characteristics, use fixed offsets without scaling
+      if (this.currentGraphPreset === 'epc2040_output') {
+        baseOffsets = {
+          marginLeft: preset.marginLeft,
+          marginRight: preset.marginRight,
+          marginTop: preset.marginTop,
+          marginBottom: preset.marginBottom
+        };
+      } else {
+        // Scale offsets based on image size for other presets
+        const scaleFactor = Math.min(width, height) / 600; // Base on 600px reference
+        baseOffsets = {
+          marginLeft: Math.round(preset.marginLeft * scaleFactor),
+          marginRight: Math.round(preset.marginRight * scaleFactor),
+          marginTop: Math.round(preset.marginTop * scaleFactor),
+          marginBottom: Math.round(preset.marginBottom * scaleFactor)
+        };
+      }
+    } else if (width > 800 || height > 600) {
+      // Use alternative offsets for larger images
+      const scaleFactor = Math.min(width, height) / 600; // Base on 600px reference
+      baseOffsets = {
+        marginLeft: Math.round(this.HARDCODED_OFFSETS.alternative.marginLeft * scaleFactor),
+        marginRight: Math.round(this.HARDCODED_OFFSETS.alternative.marginRight * scaleFactor),
+        marginTop: Math.round(this.HARDCODED_OFFSETS.alternative.marginTop * scaleFactor),
+        marginBottom: Math.round(this.HARDCODED_OFFSETS.alternative.marginBottom * scaleFactor)
+      };
+    } else {
+      // Use standard offsets for smaller images
+      const scaleFactor = Math.min(width, height) / 600; // Base on 600px reference
+      baseOffsets = {
+        marginLeft: Math.round(this.HARDCODED_OFFSETS.marginLeft * scaleFactor),
+        marginRight: Math.round(this.HARDCODED_OFFSETS.marginRight * scaleFactor),
+        marginTop: Math.round(this.HARDCODED_OFFSETS.marginTop * scaleFactor),
+        marginBottom: Math.round(this.HARDCODED_OFFSETS.marginBottom * scaleFactor)
+      };
+    }
+    
+    // Apply user overrides if any
+    return {
+      marginLeft: this.userOffsetOverrides.marginLeft ?? baseOffsets.marginLeft,
+      marginRight: this.userOffsetOverrides.marginRight ?? baseOffsets.marginRight,
+      marginTop: this.userOffsetOverrides.marginTop ?? baseOffsets.marginTop,
+      marginBottom: this.userOffsetOverrides.marginBottom ?? baseOffsets.marginBottom
+    };
+  }
+
+  // Automatic graph boundary detection with image analysis
+  private detectGraphBoundaries(width: number, height: number, imageData?: Uint8ClampedArray): {
+    marginLeft: number;
+    marginRight: number;
+    marginTop: number;
+    marginBottom: number;
+    graphWidth: number;
+    graphHeight: number;
+  } {
+    let boundaries;
+    
+    // If we have image data, try to detect actual axis positions
+    if (imageData) {
+      boundaries = this.detectAxisPositions(width, height, imageData);
+    } else {
+      // Fallback to adaptive margins based on image size
+      const minMargin = Math.min(width, height) * 0.05; // Minimum 5% margin
+      const maxMargin = Math.min(width, height) * 0.15; // Maximum 15% margin
+      
+      // Adaptive margins: larger images get proportionally smaller margins
+      const scaleFactor = Math.min(width, height) / 800; // Base on 800px reference
+      const adaptiveMargin = Math.max(minMargin, Math.min(maxMargin, 
+        Math.min(width, height) * 0.1 * Math.max(0.5, Math.min(1.5, scaleFactor))));
+      
+      boundaries = {
+        marginLeft: adaptiveMargin,
+        marginRight: adaptiveMargin,
+        marginTop: adaptiveMargin,
+        marginBottom: adaptiveMargin,
+        graphWidth: width - adaptiveMargin * 2,
+        graphHeight: height - adaptiveMargin * 2
+      };
+    }
+    
+    // Validate the detected boundaries
+    if (!this.validateGraphBoundaries(boundaries, width, height)) {
+      // If validation fails, use conservative defaults
+      const defaultMargin = Math.min(width, height) * 0.1;
+      boundaries = {
+        marginLeft: defaultMargin,
+        marginRight: defaultMargin,
+        marginTop: defaultMargin,
+        marginBottom: defaultMargin,
+        graphWidth: width - defaultMargin * 2,
+        graphHeight: height - defaultMargin * 2
+      };
+    }
+    
+    return boundaries;
+  }
+
+  // Detect actual axis positions by analyzing image data
+  private detectAxisPositions(width: number, height: number, imageData: Uint8ClampedArray): {
+    marginLeft: number;
+    marginRight: number;
+    marginTop: number;
+    marginBottom: number;
+    graphWidth: number;
+    graphHeight: number;
+  } {
+    // Use improved axis detection
+    const margins = this.improveAxisDetection(imageData, width, height);
+    
+    return {
+      ...margins,
+      graphWidth: width - margins.marginLeft - margins.marginRight,
+      graphHeight: height - margins.marginTop - margins.marginBottom
+    };
+  }
+
+  // Detect Y-axis position by finding leftmost continuous dark line
+  private detectYAxis(imageData: Uint8ClampedArray, width: number, height: number): number {
+    const threshold = 100; // Dark pixel threshold
+    const minLineLength = height * 0.7; // Axis should be at least 70% of image height
+    
+    for (let x = 0; x < width * 0.3; x++) { // Search in left 30% of image
+      let darkPixels = 0;
+      
+      for (let y = 0; y < height; y++) {
+        const idx = (y * width + x) * 4;
+        const r = imageData[idx];
+        const g = imageData[idx + 1];
+        const b = imageData[idx + 2];
+        
+        // Check if pixel is dark (likely part of axis)
+        if (r < threshold && g < threshold && b < threshold) {
+          darkPixels++;
+        }
+      }
+      
+      // If we found a continuous dark line, this is likely the Y-axis
+      if (darkPixels > minLineLength) {
+        return x + 2; // Add small offset to get inside the graph area
+      }
+    }
+    
+    return -1; // Not found
+  }
+
+  // Detect X-axis position by finding bottommost continuous dark line
+  private detectXAxis(imageData: Uint8ClampedArray, width: number, height: number): number {
+    const threshold = 100; // Dark pixel threshold
+    const minLineLength = width * 0.7; // Axis should be at least 70% of image width
+    
+    for (let y = height - 1; y > height * 0.7; y--) { // Search in bottom 30% of image
+      let darkPixels = 0;
+      
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        const r = imageData[idx];
+        const g = imageData[idx + 1];
+        const b = imageData[idx + 2];
+        
+        // Check if pixel is dark (likely part of axis)
+        if (r < threshold && g < threshold && b < threshold) {
+          darkPixels++;
+        }
+      }
+      
+      // If we found a continuous dark line, this is likely the X-axis
+      if (darkPixels > minLineLength) {
+        return height - y + 2; // Add small offset to get inside the graph area
+      }
+    }
+    
+    return -1; // Not found
   }
 
   // Check if coordinate is valid
@@ -1099,7 +1727,7 @@ export class CurveExtractionService {
     try {
       const response = await fetch(`${this.fastApiBaseUrl}/api/curve-extraction/detect-colors`, {
         method: 'POST',
-        body: formData,
+        body: (() => { formData.append('color_tolerance', '0'); return formData; })(), // Use 0 for legacy compatibility
         signal: AbortSignal.timeout(15000) // 15 second timeout for color detection
       });
 
@@ -1121,7 +1749,7 @@ export class CurveExtractionService {
     }
   }
 
-  // FastAPI curve extraction
+  // FastAPI curve extraction - Updated to use optimized endpoint by default
   private async extractCurvesFastApi(
     imageData: Uint8Array,
     selectedColors: string[],
@@ -1139,6 +1767,10 @@ export class CurveExtractionService {
       throw new Error('Invalid configuration: missing or invalid numeric properties');
     }
     
+    // Determine which endpoint to use based on config.mode
+    const endpoint = this.getExtractionEndpoint(config.mode);
+    console.log(`Using endpoint: ${endpoint}`);
+    
     const formData = new FormData();
     const blob = new Blob([imageData], { type: 'image/png' });
     formData.append('file', blob, 'image.png');
@@ -1151,12 +1783,25 @@ export class CurveExtractionService {
     formData.append('y_scale', config.y_scale.toString());
     formData.append('x_scale_type', config.x_scale_type || 'linear');
     formData.append('y_scale_type', config.y_scale_type || 'linear');
-    formData.append('min_size', (config.min_size || 100).toString());
-    formData.append('detection_sensitivity', (config.detection_sensitivity || 5).toString());
-    formData.append('color_tolerance', (config.color_tolerance || 20).toString());
-    formData.append('smoothing_factor', (config.smoothing_factor || 3).toString());
+    formData.append('min_size', (config.min_size ?? 1000).toString()); // Default to 1000 for legacy compatibility
+    formData.append('color_tolerance', (config.color_tolerance ?? 0).toString()); // Default to 0 for legacy compatibility
     formData.append('x_axis_name', config.x_axis_name || 'X-Axis');
     formData.append('y_axis_name', config.y_axis_name || 'Y-Axis');
+    
+    // Add mode-specific parameters
+    if (endpoint === '/api/curve-extraction/extract-curves') {
+      // Main endpoint with full feature set
+      formData.append('mode', (config.mode || 'legacy'));
+      formData.append('use_plot_area', String(!!config.use_plot_area));
+      formData.append('use_annotation_mask', String(!!config.use_annotation_mask));
+      formData.append('use_edge_guided', String(!!config.use_edge_guided));
+      formData.append('use_adaptive_binning', String(!!config.use_adaptive_binning));
+      formData.append('use_auto_color', String(!!config.use_auto_color));
+    } else if (endpoint === '/api/curve-extraction/extract-curves-optimized') {
+      // Optimized endpoint with simplified parameters
+      formData.append('color_tolerance', (config.color_tolerance ?? 0).toString());
+      formData.append('use_plot_area', String(!!config.use_plot_area));
+    }
 
     console.log('FormData contents:');
     for (const [key, value] of formData.entries()) {
@@ -1168,7 +1813,7 @@ export class CurveExtractionService {
     }
 
     try {
-      const response = await fetch(`${this.fastApiBaseUrl}/api/curve-extraction/extract-curves`, {
+      const response = await fetch(`${this.fastApiBaseUrl}${endpoint}`, {
         method: 'POST',
         body: formData,
         signal: AbortSignal.timeout(30000) // 30 second timeout for curve extraction
@@ -1194,11 +1839,26 @@ export class CurveExtractionService {
       console.log('✅ Curve extraction successful, extracted curves:', result.data.curves.length);
       console.log('Total points:', result.data.total_points);
       console.log('Processing time:', result.data.processing_time);
+      console.log('Extraction method:', result.data.metadata?.extraction_method || 'unknown');
       
       return result.data;
     } catch (error) {
       console.error('❌ FastAPI curve extraction error:', error);
       throw error;
+    }
+  }
+
+  // Helper method to determine which endpoint to use
+  private getExtractionEndpoint(mode?: string): string {
+    switch (mode) {
+      case 'legacy':
+        return '/api/curve-extraction/extract-curves-legacy';
+      case 'optimized':
+        return '/api/curve-extraction/extract-curves-optimized';
+      case 'auto':
+      case 'enhanced':
+      default:
+        return '/api/curve-extraction/extract-curves';
     }
   }
 
@@ -1223,7 +1883,7 @@ export class CurveExtractionService {
       formData.append('y_scale', config.y_scale.toString());
       formData.append('x_scale_type', config.x_scale_type || 'linear');
       formData.append('y_scale_type', config.y_scale_type || 'linear');
-      formData.append('min_size', (config.min_size || 100).toString());
+      formData.append('min_size', (config.min_size || 1000).toString()); // Default to 1000 for legacy compatibility
       formData.append('algorithm', 'legacy');
 
       const response = await fetch(`${this.fastApiBaseUrl}/api/curve-extraction/extract-curves-legacy`, {
@@ -1298,6 +1958,132 @@ export class CurveExtractionService {
       console.error('❌ LLM curve extraction error:', error);
       throw error;
     }
+  }
+
+  // Validate detected graph boundaries
+  private validateGraphBoundaries(boundaries: {
+    marginLeft: number;
+    marginRight: number;
+    marginTop: number;
+    marginBottom: number;
+    graphWidth: number;
+    graphHeight: number;
+  }, width: number, height: number): boolean {
+    const { marginLeft, marginRight, marginTop, marginBottom, graphWidth, graphHeight } = boundaries;
+    
+    // Check if margins are reasonable
+    if (marginLeft < 0 || marginRight < 0 || marginTop < 0 || marginBottom < 0) {
+      return false;
+    }
+    
+    // Check if graph area is reasonable (at least 50% of image)
+    if (graphWidth < width * 0.5 || graphHeight < height * 0.5) {
+      return false;
+    }
+    
+    // Check if total margins don't exceed 50% of image
+    if (marginLeft + marginRight > width * 0.5 || marginTop + marginBottom > height * 0.5) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Improve axis detection by looking for grid lines
+  private improveAxisDetection(imageData: Uint8ClampedArray, width: number, height: number): {
+    marginLeft: number;
+    marginRight: number;
+    marginTop: number;
+    marginBottom: number;
+  } {
+    // Try to detect grid lines to improve axis detection
+    const gridLines = this.detectGridLines(imageData, width, height);
+    
+    // Use grid lines to refine axis positions
+    let marginLeft = this.detectYAxis(imageData, width, height);
+    let marginBottom = this.detectXAxis(imageData, width, height);
+    
+    // If grid lines are detected, use them to improve accuracy
+    if (gridLines.verticalLines.length > 0) {
+      const leftmostGrid = Math.min(...gridLines.verticalLines);
+      if (marginLeft === -1 || Math.abs(leftmostGrid - marginLeft) < 10) {
+        marginLeft = leftmostGrid;
+      }
+    }
+    
+    if (gridLines.horizontalLines.length > 0) {
+      const bottommostGrid = Math.max(...gridLines.horizontalLines);
+      if (marginBottom === -1 || Math.abs((height - bottommostGrid) - marginBottom) < 10) {
+        marginBottom = height - bottommostGrid;
+      }
+    }
+    
+    // Use reasonable defaults if detection fails
+    if (marginLeft === -1) marginLeft = width * 0.1;
+    if (marginBottom === -1) marginBottom = height * 0.1;
+    
+    return {
+      marginLeft,
+      marginRight: width * 0.05,
+      marginTop: height * 0.05,
+      marginBottom
+    };
+  }
+
+  // Detect grid lines in the image
+  private detectGridLines(imageData: Uint8ClampedArray, width: number, height: number): {
+    verticalLines: number[];
+    horizontalLines: number[];
+  } {
+    const threshold = 120; // Light gray threshold for grid lines
+    const verticalLines: number[] = [];
+    const horizontalLines: number[] = [];
+    
+    // Detect vertical grid lines
+    for (let x = 0; x < width; x++) {
+      let gridPixels = 0;
+      for (let y = 0; y < height; y++) {
+        const idx = (y * width + x) * 4;
+        const r = imageData[idx];
+        const g = imageData[idx + 1];
+        const b = imageData[idx + 2];
+        
+        // Check if pixel is light gray (likely grid line)
+        if (r > threshold && g > threshold && b > threshold && 
+            Math.abs(r - g) < 20 && Math.abs(g - b) < 20) {
+          gridPixels++;
+        }
+      }
+      
+      // If we found enough grid pixels in this column
+      if (gridPixels > height * 0.3) {
+        verticalLines.push(x);
+      }
+    }
+    
+    // Detect horizontal grid lines
+    for (let y = 0; y < height; y++) {
+      let gridPixels = 0;
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        const r = imageData[idx];
+        const g = imageData[idx + 1];
+        const b = imageData[idx + 2];
+        
+        // Check if pixel is light gray (likely grid line)
+        if (r > threshold && g > threshold && b > threshold && 
+            Math.abs(r - g) < 20 && Math.abs(g - b) < 20) {
+          gridPixels++;
+        }
+      }
+      
+      // If we found enough grid pixels in this row
+      if (gridPixels > width * 0.3) {
+        horizontalLines.push(y);
+      }
+    }
+    
+    return { verticalLines, horizontalLines };
   }
 }
 

@@ -1,18 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Card, CardHeader, CardContent, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Table, Tbody, Td, Th, Thead, Tr } from '../components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Alert, AlertDescription } from '../components/ui/alert';
+import { Card, CardHeader, CardContent, CardTitle, Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Alert, AlertDescription } from '@espice/ui';
 import { parameterMappingService, SPICE_TEMPLATES } from '../services/spiceTemplates';
 import { spiceModelGenerator } from '../services/spiceGenerator';
 import type { Parameter, Product } from '../types/index';
-import { Button } from '../components/ui/button';
-import { Switch } from '../components/ui/switch';
-import { Textarea } from '../components/ui/textarea';
-import Modal from '../components/ui/modal';
+import { Button, Switch, Textarea, Modal } from '@espice/ui';
 import { Info, Cpu, Database, BarChart3, Download, AlertCircle, CheckCircle, Package, Zap, Search, X } from 'lucide-react';
-import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
+import { Popover, PopoverTrigger, PopoverContent } from '@espice/ui';
 import { fetchProductParameters, BackendParameter } from '../services/batchService';
 import { 
   ASM_HEMT_PARAMETERS, 
@@ -22,11 +15,8 @@ import {
   getRequiredParameters,
   validateParameterValue 
 } from '../services/asmHemtParameters';
-import { 
-  getMeasurementDataByType, 
-  measurementDataToCSV, 
-  getAvailableMeasurementData 
-} from '../data/mockMeasurementData';
+import { ASMSpiceExtractionService, ASMExtractionData } from '../services/asmSpiceExtractionService';
+// Removed mock measurement data; availability will be based on actual product data presence
 import ParameterInfoModal from '../components/ParameterInfoModal';
 import { ProductSpiceSyncService } from '../services/productSpiceSync';
 import productManagementService, { ProductWithParameters } from '../services/productManagementService';
@@ -86,6 +76,8 @@ export default function SPICEGenerationPage() {
   const [extractionRecommendations, setExtractionRecommendations] = useState<any[]>([]);
   const [syncStatusMinimized, setSyncStatusMinimized] = useState(true);
   const [validationMinimized, setValidationMinimized] = useState(true);
+  const extractionServiceRef = useRef<ASMSpiceExtractionService | null>(null);
+  if (!extractionServiceRef.current) extractionServiceRef.current = new ASMSpiceExtractionService();
 
   // Product management integration
   const [products, setProducts] = useState<ProductWithParameters[]>([]);
@@ -161,11 +153,139 @@ export default function SPICEGenerationPage() {
       });
   }, [selectedProductId]);
 
-  // Load available measurement data for the selected product
+  // Derive available measurement data based on persisted product characteristics
   useEffect(() => {
-    const availableData = getAvailableMeasurementData(selectedProductId);
-    setAvailableMeasurementData(availableData);
-  }, [selectedProductId]);
+    if (!selectedProduct) {
+      setAvailableMeasurementData([]);
+      return;
+    }
+    const available = (selectedProduct.characteristics || [])
+      .filter(c => c.csvData && c.csvData.length > 0)
+      .map(c => c.type);
+    setAvailableMeasurementData(available);
+  }, [selectedProduct]);
+
+  // Build ASMExtractionData from stored product characteristics (CSV rows)
+  const buildExtractionDataFromProduct = useCallback((): ASMExtractionData => {
+    const data: ASMExtractionData = {};
+    if (!selectedProduct?.characteristics) return data;
+    const getNum = (row: any, variants: string[], fallback?: number) => {
+      for (const key of variants) {
+        if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+          const n = Number(row[key]);
+          if (!Number.isNaN(n)) return n;
+        }
+      }
+      return fallback as any;
+    };
+    const toLower = (s: any) => (typeof s === 'string' ? s.toLowerCase() : s);
+    for (const c of selectedProduct.characteristics) {
+      if (!c.csvData || c.csvData.length === 0) continue;
+      const rows = c.csvData as any[];
+      switch (c.type) {
+        case 'output': {
+          const vds: number[] = [];
+          const id: number[] = [];
+          const vgs: number[] = [];
+          rows.forEach(r => {
+            vds.push(getNum(r, ['vds','VDS','Vds','Vds(V)']));
+            id.push(getNum(r, ['id','ID','Id','Id(A)']));
+            vgs.push(getNum(r, ['vgs','VGS','Vgs','Vgs(V)']));
+          });
+          data.outputCharacteristics = { vds, id, vgs };
+          break;
+        }
+        case 'transfer': {
+          const vgs: number[] = [];
+          const id: number[] = [];
+          const temp: number[] = [];
+          rows.forEach(r => {
+            vgs.push(getNum(r, ['vgs','VGS','Vgs','Vgs(V)']));
+            id.push(getNum(r, ['id','ID','Id','Id(A)']));
+            temp.push(getNum(r, ['temp','Temp','TEMP','Temperature']));
+          });
+          data.transferCharacteristics = { vgs, id, temp };
+          break;
+        }
+        case 'capacitance': {
+          const entries = rows.map(r => ({
+            vds: getNum(r, ['vds','VDS','Vds','Vds(V)']),
+            c: getNum(r, ['c','C','cap','Capacitance','C(pF)']),
+            type: toLower(r['type'] || r['TYPE'] || 'ciss') as 'ciss'|'coss'|'crss'
+          }));
+          data.capacitance = entries as any;
+          break;
+        }
+        case 'rds_vgs_temp': {
+          const vgs: number[] = [];
+          const rds: number[] = [];
+          const temp: number[] = [];
+          rows.forEach(r => {
+            vgs.push(getNum(r, ['vgs','VGS','Vgs']));
+            rds.push(getNum(r, ['rds','RDS','Rds','Rds(Ω)','Rds(mΩ)'], NaN));
+            temp.push(getNum(r, ['temp','Temp','TEMP','Temperature']));
+          });
+          data.rdsVgsTemp = { vgs, rds, temp };
+          break;
+        }
+        case 'rds_vgs_current': {
+          const vgs: number[] = [];
+          const rds: number[] = [];
+          let idConst: number = 0;
+          rows.forEach(r => {
+            vgs.push(getNum(r, ['vgs','VGS','Vgs']));
+            rds.push(getNum(r, ['rds','RDS','Rds']));
+            const idRow = getNum(r, ['id','ID','Id','Id(A)']);
+            if (!Number.isNaN(idRow)) idConst = idRow;
+          });
+          data.rdsVgsId = { vgs, rds, id: idConst || 1.5 };
+          break;
+        }
+        default:
+          break;
+      }
+    }
+    return data;
+  }, [selectedProduct?.characteristics]);
+
+  // Auto-extract ASM parameters from available CSVs
+  useEffect(() => {
+    const run = async () => {
+      if (!selectedProduct) return;
+      // Only run if at least one measurement exists
+      if (availableMeasurementData.length === 0) return;
+      try {
+        const extractionData = buildExtractionDataFromProduct();
+        const svc = extractionServiceRef.current!;
+        const result = await svc.extractASMParameters(extractionData, selectedProduct as any);
+        if (result?.success) {
+          const extracted = svc.convertToSPICEParameters(result.parameters);
+          setAsmParameters(prev => ({ ...prev, ...extracted }));
+        }
+      } catch (e) {
+        // Silent failure; user can inspect console if needed
+        console.warn('Auto-extraction failed:', e);
+      }
+    };
+    void run();
+  }, [selectedProduct?.id, availableMeasurementData.join('|')]);
+
+  // Listen for external product characteristic updates (from ParameterInfoModal uploads/deletes)
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      try {
+        // Refresh currently selected product to get latest characteristics
+        if (selectedProduct?.id) {
+          const updated = await productManagementService.getProduct(selectedProduct.id);
+          if (updated) setSelectedProduct(updated);
+        }
+      } catch {}
+    };
+    window.addEventListener('espice:product-characteristics-updated', handler as EventListener);
+    return () => {
+      window.removeEventListener('espice:product-characteristics-updated', handler as EventListener);
+    };
+  }, [selectedProduct?.id]);
 
   // Initialize ASM parameters with default values
   useEffect(() => {
@@ -274,6 +394,28 @@ export default function SPICEGenerationPage() {
     return spiceText;
   };
 
+  // Remove parameters not allowed by the active template from the generated SPICE text
+  function cleanSpiceParameters(spice: string, allowedNames: Set<string>): string {
+    if (!spice) return spice;
+    const lines = spice.split('\n');
+    const cleaned: string[] = [];
+    const assignRegex = /^\s*\+\s*([A-Za-z0-9_]+)\s*=/;
+    for (const line of lines) {
+      const m = line.match(assignRegex);
+      if (m) {
+        const name = m[1];
+        if (allowedNames.has(name)) {
+          cleaned.push(line);
+        } else {
+          // skip unknown param line
+        }
+      } else {
+        cleaned.push(line);
+      }
+    }
+    return cleaned.join('\n');
+  }
+
   // Generate SPICE model text using the selected template, parameters, and product
   const spiceText = useMemo(() => {
     if (!selectedProduct || !selectedTemplate) return '';
@@ -281,7 +423,10 @@ export default function SPICEGenerationPage() {
     try {
       // Check if ASM HEMT template is selected
       if (selectedTemplate.id === 'asm-hemt-101.5.0') {
-        return generateASMHemtSpiceText(asmParameters, selectedProduct, { includeComments, includeSubcircuit });
+        const raw = generateASMHemtSpiceText(asmParameters, selectedProduct, { includeComments, includeSubcircuit });
+        // Allow all ASM parameter names from ASM_HEMT_PARAMETERS
+        const allowed = new Set(ASM_HEMT_PARAMETERS.map(p => p.name));
+        return cleanSpiceParameters(raw, allowed);
       }
       
       // Use existing logic for other templates
@@ -289,9 +434,12 @@ export default function SPICEGenerationPage() {
       const values = (spiceModelGenerator as any).generateParameterValues
         ? (spiceModelGenerator as any).generateParameterValues(mappings, selectedTemplate)
         : {};
-      return (spiceModelGenerator as any).generateSPICEText
+      const raw = (spiceModelGenerator as any).generateSPICEText
         ? (spiceModelGenerator as any).generateSPICEText(selectedTemplate, values, selectedProduct, { modelName: selectedProduct.name, includeComments, includeSubcircuit })
         : '';
+      // Permit only the parameters defined by the selected template
+      const allowed = new Set(selectedTemplate.parameters.map(p => p.spiceName));
+      return cleanSpiceParameters(raw, allowed);
     } catch {
       return '';
     }
@@ -355,6 +503,79 @@ export default function SPICEGenerationPage() {
   const [troubleshootingOpen, setTroubleshootingOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
+  // CSV upload modal state and helpers
+  const [noCsvModalOpen, setNoCsvModalOpen] = useState(false);
+  const [uploadingCsv, setUploadingCsv] = useState(false);
+  const [outputCsvFile, setOutputCsvFile] = useState<File | null>(null);
+  const [transferCsvFile, setTransferCsvFile] = useState<File | null>(null);
+  const [capacitanceCsvFile, setCapacitanceCsvFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (selectedProduct && availableMeasurementData.length === 0) {
+      setNoCsvModalOpen(true);
+    } else {
+      setNoCsvModalOpen(false);
+    }
+  }, [selectedProduct, availableMeasurementData.length]);
+
+  const parseCsvFile = async (file: File): Promise<any[]> => {
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (lines.length === 0) return [];
+    const headers = lines[0].split(',').map(h => h.trim());
+    const rows: any[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',');
+      const row: Record<string, string> = {};
+      headers.forEach((h, idx) => {
+        row[h] = (values[idx] ?? '').trim();
+      });
+      rows.push(row);
+    }
+    return rows;
+  };
+
+  const handleBulkCsvUpload = async () => {
+    if (!selectedProduct) return;
+    try {
+      setUploadingCsv(true);
+      if (outputCsvFile) {
+        const rows = await parseCsvFile(outputCsvFile);
+        await productManagementService.uploadCharacteristicData(selectedProduct.id, {
+          type: 'output',
+          name: 'Output Characteristics',
+          description: 'Drain current vs Drain-Source voltage at various gate voltages',
+          csvData: rows,
+        } as any);
+      }
+      if (transferCsvFile) {
+        const rows = await parseCsvFile(transferCsvFile);
+        await productManagementService.uploadCharacteristicData(selectedProduct.id, {
+          type: 'transfer',
+          name: 'Transfer Characteristics',
+          description: 'Drain current vs Gate-Source voltage at various drain voltages',
+          csvData: rows,
+        } as any);
+      }
+      if (capacitanceCsvFile) {
+        const rows = await parseCsvFile(capacitanceCsvFile);
+        await productManagementService.uploadCharacteristicData(selectedProduct.id, {
+          type: 'capacitance',
+          name: 'Capacitance Characteristics',
+          description: 'Input/Output/Reverse Transfer Capacitance vs VDS',
+          csvData: rows,
+        } as any);
+      }
+      const updated = await productManagementService.getProduct(selectedProduct.id);
+      setSelectedProduct(updated);
+      setNoCsvModalOpen(false);
+    } catch (e) {
+      console.error('CSV upload failed', e);
+    } finally {
+      setUploadingCsv(false);
+    }
+  };
+
   // ASM HEMT helper functions
   const handleParameterClick = (paramName: string) => {
     setSelectedParameter(paramName);
@@ -394,7 +615,7 @@ export default function SPICEGenerationPage() {
   };
 
   const getParameterStatus = (param: any) => {
-    const hasValue = asmParameters[param.name] !== undefined;
+    const hasValue = asmParameters[param.name] !== undefined && !Number.isNaN(asmParameters[param.name]);
     const isRequired = param.required;
     const hasMeasurementData = Object.entries(param.measurementData).some(([key, required]) => {
       if (!required) return false;
@@ -410,15 +631,15 @@ export default function SPICEGenerationPage() {
   const [showControls, setShowControls] = useState(false);
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Product and Model Selection Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-start gap-8 flex-1">
+      <div className="bg-muted/20 border-b border-border p-4">
+        <div className="mx-auto w-full max-w-7xl px-0">
+          <div className="relative flex items-center justify-center">
+            <div className="flex items-start gap-8 mx-auto">
               {/* Product Selection */}
-              <div className="flex-1 max-w-md relative" ref={productDropdownRef}>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <div className="max-w-md w-[420px] relative" ref={productDropdownRef}>
+                <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                   <Package className="w-4 h-4" />
                   Product Selection
                 </label>
@@ -483,26 +704,22 @@ export default function SPICEGenerationPage() {
               </div>
 
               {/* Model Template Selection */}
-              <div className="flex-1 max-w-md relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <div className="max-w-md w-[420px] relative">
+                <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                   <Zap className="w-4 h-4" />
                   SPICE Model Template
                 </label>
-                <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-                  <SelectTrigger className="w-full h-10 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground">
-                    <SelectValue placeholder="Select a template" className="text-foreground" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border border-border rounded-lg shadow-xl max-h-60">
-                    {templateList.map(template => (
-                      <SelectItem key={template.id} value={template.id} className="hover:bg-muted cursor-pointer">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-foreground">{template.name}</span>
-                          <span className="text-xs text-muted-foreground">Version {template.version}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  value={selectedTemplateId}
+                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  className="w-full h-10 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                >
+                  {templateList.map(template => (
+                    <option key={template.id} value={template.id}>
+                      {template.name} (v{template.version})
+                    </option>
+                  ))}
+                </select>
                 {selectedTemplate && (
                   <div className="mt-2 text-xs text-gray-600">
                     <span className="font-medium">Type:</span> {selectedTemplate.modelType} • 
@@ -513,7 +730,7 @@ export default function SPICEGenerationPage() {
             </div>
 
             {/* Floating Controls Toggle */}
-            <div className="ml-4">
+            <div className="absolute right-0 top-1/2 -translate-y-1/2">
               <Button 
                 size="sm" 
                 variant="outline" 
@@ -550,9 +767,9 @@ export default function SPICEGenerationPage() {
       )}
 
       {/* Main horizontal layout for major functions */}
-      <div className="flex flex-row gap-4 items-stretch w-full h-full min-w-0 overflow-hidden p-4">
-        {/* Left: ASM HEMT Parameters Only */}
-        <div className="flex flex-col w-96 min-w-0 max-w-full overflow-hidden" style={{ fontSize: '0.92rem' }}>
+      <div className="flex flex-row gap-4 items-stretch w-full h-full min-w-0 overflow-hidden p-4 max-w-7xl mx-auto">
+        {/* Left: ASM HEMT Parameters Only - Made wider */}
+        <div className="flex flex-col w-[560px] min-w-0 max-w-full overflow-hidden" style={{ fontSize: '0.92rem' }}>
           {/* ASM HEMT Parameters Section */}
           <Card className="min-w-0 max-w-full overflow-hidden h-full flex flex-col">
             <CardHeader>
@@ -562,22 +779,29 @@ export default function SPICEGenerationPage() {
                   ASM HEMT Parameters
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-40 h-8 text-xs px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground">
-                      <SelectValue placeholder="Filter by category" className="text-foreground" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border border-border rounded-lg shadow-xl max-h-60">
-                      <SelectItem value="all" className="text-xs hover:bg-muted cursor-pointer">All Categories</SelectItem>
-                      {Object.entries(ASM_HEMT_CATEGORIES).map(([key, label]) => (
-                        <SelectItem key={key} value={key} className="text-xs hover:bg-muted cursor-pointer">{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-48 h-8 text-xs px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                  >
+                    <option value="all">All Categories</option>
+                    {Object.entries(ASM_HEMT_CATEGORIES).map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="min-w-0 max-w-full overflow-y-auto flex-1">
               <div className="space-y-4">
+                {/* Instructions */}
+                <div className="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <Info className="w-3 h-3" />
+                    <span>💡 <strong>Tip:</strong> Double-click any parameter row to view detailed information</span>
+                  </div>
+                </div>
+                
                 {/* Measurement Data Status */}
                 <div className="bg-blue-50 p-3 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
@@ -593,103 +817,120 @@ export default function SPICEGenerationPage() {
                   </div>
                 </div>
 
-                {/* Parameters Table */}
+                {/* Parameters Table - Removed Info column and made rows clickable */}
                 <div className="overflow-x-auto">
                   <Table>
-                  <Thead>
-                    <Tr>
-                      <Th>Parameter</Th>
-                      <Th>Value</Th>
-                      <Th>Unit</Th>
-                      <Th>Status</Th>
-                      <Th>Info</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {getFilteredParameters().map((param) => {
-                      const status = getParameterStatus(param);
-                      const value = asmParameters[param.name] || param.defaultValue;
-                      
-                      const getStatusIcon = () => {
-                        switch (status) {
-                          case 'complete':
-                            return <CheckCircle className="w-4 h-4 text-green-500" />;
-                          case 'missing':
-                            return <AlertCircle className="w-4 h-4 text-red-500" />;
-                          case 'no-data':
-                            return <AlertCircle className="w-4 h-4 text-orange-500" />;
-                          default:
-                            return <AlertCircle className="w-4 h-4 text-yellow-500" />;
-                        }
-                      };
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-normal break-words">Parameter</TableHead>
+                        <TableHead className="whitespace-normal break-words">Value</TableHead>
+                        <TableHead className="whitespace-normal break-words">Unit</TableHead>
+                        <TableHead className="whitespace-normal break-words">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {getFilteredParameters().map((param) => {
+                        const status = getParameterStatus(param);
+                        const raw = asmParameters[param.name];
+                        const value = raw === undefined || raw === null || Number.isNaN(raw) ? NaN : raw;
+                        
+                        const getStatusIcon = () => {
+                          switch (status) {
+                            case 'complete':
+                              return <CheckCircle className="w-4 h-4 text-green-500" />;
+                            case 'missing':
+                              return <AlertCircle className="w-4 h-4 text-red-500" />;
+                            case 'no-data':
+                              return <AlertCircle className="w-4 h-4 text-orange-500" />;
+                            default:
+                              return <AlertCircle className="w-4 h-4 text-yellow-500" />;
+                          }
+                        };
 
-                      const getStatusText = () => {
-                        switch (status) {
-                          case 'complete':
-                            return 'Complete';
-                          case 'missing':
-                            return 'Missing';
-                          case 'no-data':
-                            return 'No Data';
-                          default:
-                            return 'Partial';
-                        }
-                      };
+                        const getStatusText = () => {
+                          switch (status) {
+                            case 'complete':
+                              return 'Complete';
+                            case 'missing':
+                              return 'Missing';
+                            case 'no-data':
+                              return 'No Data';
+                            default:
+                              return 'Partial';
+                          }
+                        };
 
-                      return (
-                        <Tr key={param.name} className="hover:bg-gray-50">
-                          <Td className="max-w-[200px]">
-                            <button
-                              onClick={() => handleParameterClick(param.name)}
-                              className="text-left hover:text-blue-600 transition-colors font-medium"
-                            >
-                              {param.name}
-                            </button>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {param.required && <span className="text-red-500 mr-2">Required</span>}
-                              {param.category}
-                            </div>
-                          </Td>
-                          <Td>
-                            <input
-                              type="number"
-                              value={value}
-                              onChange={(e) => handleParameterValueChange(param.name, parseFloat(e.target.value) || 0)}
-                              className="w-20 px-2 py-1 text-xs border border-border rounded focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-                              step="any"
-                            />
-                          </Td>
-                          <Td className="text-xs text-gray-600">{param.unit}</Td>
-                          <Td>
-                            <div className="flex items-center gap-1">
-                              {getStatusIcon()}
-                              <span className="text-xs">{getStatusText()}</span>
-                            </div>
-                          </Td>
-                          <Td>
-                            <button
-                              onClick={() => handleParameterClick(param.name)}
-                              className="p-1 hover:bg-gray-100 rounded transition-colors"
-                            >
-                              <Info className="w-4 h-4 text-blue-600" />
-                            </button>
-                          </Td>
-                        </Tr>
-                      );
-                    })}
-                  </Tbody>
-                </Table>
+                        return (
+                          <TableRow 
+                            key={param.name} 
+                            className="hover:bg-gray-50 cursor-pointer transition-colors group"
+                            onDoubleClick={() => handleParameterClick(param.name)}
+                            title="Double-click to view parameter information"
+                          >
+                            <TableCell className="whitespace-normal break-words">
+                              <div className="flex items-center gap-2">
+                                <div className="text-left font-medium group-hover:text-blue-600 transition-colors break-words">
+                                  {param.name}
+                                </div>
+                                <Info className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1 break-words">
+                                {param.required && <span className="text-red-500 mr-2">Required</span>}
+                                {param.category}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="number"
+                                  value={Number.isNaN(value) ? '' : value}
+                                  placeholder="N/A"
+                                  onChange={(e) => {
+                                    const v = e.target.value.trim();
+                                    if (v === '') {
+                                      // Treat empty as N/A (unset)
+                                      setAsmParameters(prev => {
+                                        const copy = { ...prev };
+                                        delete copy[param.name];
+                                        return copy;
+                                      });
+                                      return;
+                                    }
+                                    const parsed = parseFloat(v);
+                                    if (!Number.isNaN(parsed)) handleParameterValueChange(param.name, parsed);
+                                  }}
+                                  className="w-full px-2 py-1 text-xs border border-border rounded focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                                  step="any"
+                                  onClick={(e) => e.stopPropagation()} // Prevent row click when clicking input
+                                />
+                                {Number.isNaN(value) && (
+                                  <span className="text-[10px] text-muted-foreground">N/A</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-gray-600 whitespace-normal break-words">{param.unit}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {getStatusIcon()}
+                                <span className="text-xs">{getStatusText()}</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
               </div>
             </div>
             </CardContent>
           </Card>
         </div>
-        {/* Right: Model Preview Only */}
+        {/* Right: Model Preview Only - Adjusted for wider left panel */}
          <div className="flex flex-col flex-1 min-w-0 max-w-full overflow-hidden" style={{ fontSize: '0.92rem' }}>
            <Card className="min-w-0 max-w-full overflow-hidden h-full flex flex-col">
-             <CardHeader>
-               <CardTitle className="text-base truncate">SPICE Model Preview</CardTitle>
-             </CardHeader>
+              <CardHeader>
+               <CardTitle className="text-base">SPICE Model Preview</CardTitle>
+              </CardHeader>
              <CardContent className="min-w-0 max-w-full overflow-x-auto flex-1 flex flex-col">
                {/* Advanced Options */}
                <div className="flex flex-row gap-4 items-center mb-4">
@@ -702,6 +943,17 @@ export default function SPICEGenerationPage() {
                    <label htmlFor="include-subckt" className="text-sm">Include Subcircuit</label>
                  </div>
                </div>
+        {/* Missing data notice */}
+        {selectedProduct && availableMeasurementData.length === 0 && (
+          <div className="mb-4 p-3 rounded border border-red-300 bg-red-50 text-red-800 text-sm">
+            No extracted CSV data found for this product. Upload a CSV manually or extract from graph images.
+            <div className="mt-2 flex gap-2">
+              <Button size="sm" variant="secondary" onClick={() => (window.location.href = `/products/${selectedProduct.id}`)}>Upload CSV</Button>
+              <Button size="sm" onClick={() => (window.location.href = `/graph-extraction?productId=${selectedProduct.id}`)}>Open Graph Extraction</Button>
+              <Button size="sm" variant="outline" onClick={() => setNoCsvModalOpen(true)}>Upload Now</Button>
+            </div>
+          </div>
+        )}
                <div className="flex flex-row gap-2 mb-4">
                  <Button onClick={handleExportSpice} size="sm">Export as .sp</Button>
                  <Button onClick={handleExportTxt} size="sm" variant="secondary">Export as .txt</Button>
@@ -762,6 +1014,32 @@ export default function SPICEGenerationPage() {
               <Button type="submit" className="self-start">Submit Feedback</Button>
             </form>
           )}
+        </Modal>
+      )}
+
+      {/* CSV Upload Modal for missing data */}
+      {noCsvModalOpen && (
+        <Modal open={noCsvModalOpen} onClose={() => setNoCsvModalOpen(false)} title="Upload Measurement CSVs">
+          <div className="space-y-4 text-sm">
+            <p className="text-muted-foreground">Upload extracted CSVs for graphs to enable accurate SPICE generation, or proceed to Graph Extraction.</p>
+            <div className="space-y-2">
+              <label className="font-medium">Output Characteristics (Vds–Id, per Vgs)</label>
+              <input type="file" accept=".csv" onChange={(e) => setOutputCsvFile(e.target.files?.[0] || null)} />
+            </div>
+            <div className="space-y-2">
+              <label className="font-medium">Transfer Characteristics (Vgs–Id, per Temp/Vds)</label>
+              <input type="file" accept=".csv" onChange={(e) => setTransferCsvFile(e.target.files?.[0] || null)} />
+            </div>
+            <div className="space-y-2">
+              <label className="font-medium">Capacitance (Ciss/Coss/Crss vs Vds)</label>
+              <input type="file" accept=".csv" onChange={(e) => setCapacitanceCsvFile(e.target.files?.[0] || null)} />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button size="sm" onClick={handleBulkCsvUpload} disabled={uploadingCsv}>{uploadingCsv ? 'Uploading…' : 'Save CSVs'}</Button>
+              <Button size="sm" variant="secondary" onClick={() => (window.location.href = `/graph-extraction${selectedProduct ? `?productId=${selectedProduct.id}` : ''}`)}>Open Graph Extraction</Button>
+              <Button size="sm" variant="outline" onClick={() => setNoCsvModalOpen(false)}>Close</Button>
+            </div>
+          </div>
         </Modal>
       )}
 

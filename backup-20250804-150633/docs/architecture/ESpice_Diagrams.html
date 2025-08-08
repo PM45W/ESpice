@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESpice Platform - Architecture Diagrams</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 60px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 40px;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .section h2 {
+            color: #2c3e50;
+            font-size: 2em;
+            margin-bottom: 20px;
+            border-left: 5px solid #3498db;
+            padding-left: 20px;
+        }
+        
+        .section h3 {
+            color: #34495e;
+            font-size: 1.5em;
+            margin: 30px 0 20px 0;
+        }
+        
+        .diagram-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #e9ecef;
+        }
+        
+        .diagram-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .mermaid {
+            text-align: center;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .feature-card h4 {
+            color: #2c3e50;
+            margin: 0 0 10px 0;
+        }
+        
+        .feature-card ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .feature-card li {
+            margin: 5px 0;
+            color: #555;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin: 5px 0 0 0;
+        }
+        
+        .navigation {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .navigation a {
+            display: block;
+            color: #3498db;
+            text-decoration: none;
+            padding: 5px 0;
+            font-size: 0.9em;
+        }
+        
+        .navigation a:hover {
+            color: #2980b9;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .navigation {
+                position: static;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ESpice Platform</h1>
+            <p>Complete Architecture & Workflow Diagrams</p>
+        </div>
+        
+        <div class="navigation">
+            <strong>Navigation</strong>
+            <a href="#overview">System Overview</a>
+            <a href="#workflow">Data Workflow</a>
+            <a href="#microservices">Microservices</a>
+            <a href="#security">Security Flow</a>
+            <a href="#monitoring">Monitoring</a>
+            <a href="#deployment">Deployment</a>
+            <a href="#spice">SPICE Workflow</a>
+            <a href="#performance">Performance</a>
+            <a href="#techstack">Tech Stack</a>
+        </div>
+        
+        <div class="content">
+            <div id="overview" class="section">
+                <h2>🏗️ System Overview Architecture</h2>
+                <div class="diagram-container">
+                    <div class="diagram-title">Complete System Architecture</div>
+                    <div class="mermaid">
+                        graph TB
+                            subgraph "Client Layer"
+                                A[Desktop App - Tauri]
+                                B[Web Interface]
+                                C[Mobile App]
+                            end
+                            
+                            subgraph "API Gateway Layer"
+                                D[API Gateway - Port 8000]
+                            end
+                            
+                            subgraph "Core Processing Services"
+                                E[PDF Service - Port 8002]
+                                F[Image Service - Port 8003]
+                                G[Table Service - Port 8004]
+                                H[SPICE Service - Port 8005]
+                            end
+                            
+                            subgraph "AI Orchestration"
+                                I[AI Agent - Port 8006]
+                                J[Ollama LLM]
+                                K[MCP Tools]
+                            end
+                            
+                            subgraph "Production Services"
+                                L[Batch Processor - Port 8007]
+                                M[Version Control - Port 8008]
+                                N[Test Correlation - Port 8009]
+                                O[PDK Checker - Port 8010]
+                            end
+                            
+                            subgraph "Enterprise Services"
+                                P[Web Scraper - Port 8011]
+                                Q[Customization Manager - Port 8012]
+                                R[Auth Service - Port 8013]
+                                S[Notification Service - Port 8014]
+                            end
+                            
+                            subgraph "Infrastructure Services"
+                                T[Monitoring Service - Port 8015]
+                                U[Data Analytics - Port 8016]
+                                V[Rate Limiter - Port 8017]
+                                W[Backup & Recovery - Port 8018]
+                                X[Load Balancer - Port 8019]
+                            end
+                            
+                            subgraph "Data Layer"
+                                Y[Redis Cache]
+                                Z[SQLite Databases]
+                                AA[File Storage]
+                                BB[Cloud Storage]
+                            end
+                            
+                            A --> D
+                            B --> D
+                            C --> D
+                            D --> E
+                            D --> F
+                            D --> G
+                            D --> H
+                            D --> I
+                            D --> L
+                            D --> M
+                            D --> N
+                            D --> O
+                            D --> P
+                            D --> Q
+                            D --> R
+                            D --> S
+                            D --> T
+                            D --> U
+                            D --> V
+                            D --> W
+                            D --> X
+                            
+                            I --> J
+                            I --> K
+                            
+                            E --> Y
+                            F --> Y
+                            G --> Y
+                            H --> Y
+                            I --> Y
+                            
+                            L --> Z
+                            M --> Z
+                            N --> Z
+                            O --> Z
+                            P --> Z
+                            Q --> Z
+                            R --> Z
+                            S --> Z
+                            T --> Z
+                            U --> Z
+                            V --> Z
+                            W --> Z
+                            X --> Z
+                            
+                            W --> AA
+                            W --> BB
+                    </div>
+                </div>
+            </div>
+
+            <div id="workflow" class="section">
+                <h2>🔄 Data Processing Workflow</h2>
+                <div class="diagram-container">
+                    <div class="diagram-title">Datasheet Processing Pipeline</div>
+                    <div class="mermaid">
+                        sequenceDiagram
+                            participant User as User
+                            participant App as Desktop App
+                            participant Gateway as API Gateway
+                            participant AI as AI Agent
+                            participant PDF as PDF Service
+                            participant Image as Image Service
+                            participant Table as Table Service
+                            participant SPICE as SPICE Service
+                            participant Auth as Auth Service
+                            participant Monitor as Monitoring Service
+                            participant Analytics as Data Analytics
+
+                            User->>App: Upload Datasheet
+                            App->>Gateway: POST /api/pdf/upload
+                            Gateway->>Auth: Validate Token
+                            Auth-->>Gateway: Token Valid
+                            Gateway->>AI: Orchestrate Processing
+                            AI->>PDF: Extract Text & Tables
+                            PDF-->>AI: Text & Table Data
+                            AI->>Image: Extract Curves
+                            Image-->>AI: Curve Data
+                            AI->>Table: Process Tables
+                            Table-->>AI: Structured Data
+                            AI->>SPICE: Generate Models
+                            SPICE-->>AI: SPICE Models
+                            AI-->>Gateway: Complete Results
+                            Gateway-->>App: Processing Complete
+                            App-->>User: Display Results
+                            
+                            Note over Monitor,Analytics: Background Monitoring
+                            Monitor->>Monitor: Track Performance
+                            Analytics->>Analytics: Log Analytics
+                    </div>
+                </div>
+            </div>
+
+            <div id="microservices" class="section">
+                <h2>🏢 Microservices Architecture</h2>
+                <div class="diagram-container">
+                    <div class="diagram-title">Service Layer Architecture</div>
+                    <div class="mermaid">
+                        graph LR
+                            subgraph "Frontend Layer"
+                                A[Tauri Desktop App]
+                                B[React Web Interface]
+                            end
+                            
+                            subgraph "API Gateway"
+                                C[FastAPI Gateway<br/>Port 8000]
+                            end
+                            
+                            subgraph "Core Services"
+                                D[PDF Service<br/>Port 8002]
+                                E[Image Service<br/>Port 8003]
+                                F[Table Service<br/>Port 8004]
+                                G[SPICE Service<br/>Port 8005]
+                            end
+                            
+                            subgraph "AI Layer"
+                                H[AI Agent<br/>Port 8006]
+                                I[Ollama LLM]
+                            end
+                            
+                            subgraph "Production Services"
+                                J[Batch Processor<br/>Port 8007]
+                                K[Version Control<br/>Port 8008]
+                                L[Test Correlation<br/>Port 8009]
+                                M[PDK Checker<br/>Port 8010]
+                            end
+                            
+                            subgraph "Enterprise Services"
+                                N[Web Scraper<br/>Port 8011]
+                                O[Customization<br/>Port 8012]
+                                P[Authentication<br/>Port 8013]
+                                Q[Notifications<br/>Port 8014]
+                            end
+                            
+                            subgraph "Infrastructure"
+                                R[Monitoring<br/>Port 8015]
+                                S[Analytics<br/>Port 8016]
+                                T[Rate Limiter<br/>Port 8017]
+                                U[Backup<br/>Port 8018]
+                                V[Load Balancer<br/>Port 8019]
+                            end
+                            
+                            subgraph "Data Layer"
+                                W[Redis Cache]
+                                X[SQLite DBs]
+                                Y[File Storage]
+                            end
+                            
+                            A --> C
+                            B --> C
+                            C --> D
+                            C --> E
+                            C --> F
+                            C --> G
+                            C --> H
+                            C --> J
+                            C --> K
+                            C --> L
+                            C --> M
+                            C --> N
+                            C --> O
+                            C --> P
+                            C --> Q
+                            C --> R
+                            C --> S
+                            C --> T
+                            C --> U
+                            C --> V
+                            
+                            H --> I
+                            
+                            D --> W
+                            E --> W
+                            F --> W
+                            G --> W
+                            H --> W
+                            
+                            J --> X
+                            K --> X
+                            L --> X
+                            M --> X
+                            N --> X
+                            O --> X
+                            P --> X
+                            Q --> X
+                            R --> X
+                            S --> X
+                            T --> X
+                            U --> X
+                            V --> X
+                            
+                            U --> Y
+                    </div>
+                </div>
+            </div>
+
+            <div id="security" class="section">
+                <h2>🔐 Security & Authentication Flow</h2>
+                <div class="diagram-container">
+                    <div class="diagram-title">Authentication and Authorization Flow</div>
+                    <div class="mermaid">
+                        sequenceDiagram
+                            participant User as User
+                            participant App as Desktop App
+                            participant Gateway as API Gateway
+                            participant Auth as Auth Service
+                            participant RateLimit as Rate Limiter
+                            participant Monitor as Monitoring Service
+                            participant Service as Target Service
+
+                            User->>App: Login Request
+                            App->>Gateway: POST /api/auth/login
+                            Gateway->>RateLimit: Check Rate Limit
+                            RateLimit-->>Gateway: Allow Request
+                            Gateway->>Auth: Validate Credentials
+                            Auth-->>Gateway: JWT Token
+                            Gateway-->>App: Authentication Success
+                            
+                            User->>App: API Request
+                            App->>Gateway: Request with JWT
+                            Gateway->>RateLimit: Check Rate Limit
+                            RateLimit-->>Gateway: Allow Request
+                            Gateway->>Auth: Validate JWT
+                            Auth-->>Gateway: Token Valid
+                            Gateway->>Service: Forward Request
+                            Service-->>Gateway: Response
+                            Gateway->>Monitor: Log Request
+                            Gateway-->>App: Service Response
+                    </div>
+                </div>
+            </div>
+
+            <div id="monitoring" class="section">
+                <h2>📊 Monitoring & Analytics Architecture</h2>
+                <div class="diagram-container">
+                    <div class="diagram-title">Observability Stack</div>
+                    <div class="mermaid">
+                        graph TB
+                            subgraph "Application Layer"
+                                A[All Services]
+                            end
+                            
+                            subgraph "Monitoring Stack"
+                                B[Monitoring Service<br/>Port 8015]
+                                C[Data Analytics<br/>Port 8016]
+                                D[Rate Limiter<br/>Port 8017]
+                            end
+                            
+                            subgraph "Observability Tools"
+                                E[Prometheus]
+                                F[Grafana]
+                                G[Jaeger Tracing]
+                                H[Elasticsearch]
+                                I[Kibana]
+                            end
+                            
+                            subgraph "Alerting"
+                                J[Notification Service<br/>Port 8014]
+                                K[Email Alerts]
+                                L[Slack Alerts]
+                                M[SMS Alerts]
+                            end
+                            
+                            A --> B
+                            A --> C
+                            A --> D
+                            
+                            B --> E
+                            B --> F
+                            B --> G
+                            B --> H
+                            B --> I
+                            
+                            B --> J
+                            C --> J
+                            D --> J
+                            
+                            J --> K
+                            J --> L
+                            J --> M
+                    </div>
+                </div>
+            </div>
+
+            <div id="deployment" class="section">
+                <h2>🚀 Deployment Architecture</h2>
+                <div class="diagram-container">
+                    <div class="diagram-title">Production Deployment Topology</div>
+                    <div class="mermaid">
+                        graph TB
+                            subgraph "Load Balancer Layer"
+                                A[Load Balancer<br/>Port 8019]
+                            end
+                            
+                            subgraph "API Gateway Layer"
+                                B[API Gateway<br/>Port 8000]
+                            end
+                            
+                            subgraph "Service Clusters"
+                                C[Service Cluster 1]
+                                D[Service Cluster 2]
+                                E[Service Cluster N]
+                            end
+                            
+                            subgraph "Data Layer"
+                                F[Redis Cluster]
+                                G[Database Cluster]
+                                H[File Storage]
+                            end
+                            
+                            subgraph "Monitoring"
+                                I[Prometheus]
+                                J[Grafana]
+                                K[Alert Manager]
+                            end
+                            
+                            A --> B
+                            B --> C
+                            B --> D
+                            B --> E
+                            
+                            C --> F
+                            D --> F
+                            E --> F
+                            
+                            C --> G
+                            D --> G
+                            E --> G
+                            
+                            C --> H
+                            D --> H
+                            E --> H
+                            
+                            C --> I
+                            D --> I
+                            E --> I
+                            
+                            I --> J
+                            I --> K
+                    </div>
+                </div>
+            </div>
+
+            <div id="spice" class="section">
+                <h2>🔄 SPICE Model Generation Workflow</h2>
+                <div class="diagram-container">
+                    <div class="diagram-title">SPICE Model Generation Process</div>
+                    <div class="mermaid">
+                        flowchart TD
+                            A[Upload Datasheet] --> B[PDF Processing]
+                            B --> C[Text Extraction]
+                            B --> D[Table Detection]
+                            B --> E[Image Processing]
+                            
+                            C --> F[Parameter Extraction]
+                            D --> F
+                            E --> G[Curve Extraction]
+                            
+                            F --> H[Parameter Validation]
+                            G --> I[Curve Analysis]
+                            
+                            H --> J[Device Type Detection]
+                            I --> J
+                            
+                            J --> K{Device Type?}
+                            K -->|GaN-HEMT| L[ASM-HEMT Model]
+                            K -->|SiC-MOSFET| M[MVSG Model]
+                            K -->|Si-MOSFET| N[Standard MOSFET]
+                            
+                            L --> O[Parameter Optimization]
+                            M --> O
+                            N --> O
+                            
+                            O --> P[Model Validation]
+                            P --> Q[Version Control]
+                            Q --> R[Export Formats]
+                            
+                            R --> S[LTSpice]
+                            R --> T[KiCad]
+                            R --> U[Generic SPICE]
+                    </div>
+                </div>
+            </div>
+
+            <div id="performance" class="section">
+                <h2>📈 Performance & Scalability</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">2-5s</div>
+                        <div class="stat-label">Processing Speed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">95%+</div>
+                        <div class="stat-label">Extraction Accuracy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">100+</div>
+                        <div class="stat-label">Concurrent Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">1000+</div>
+                        <div class="stat-label">Datasheets/Hour</div>
+                    </div>
+                </div>
+                
+                <div class="diagram-container">
+                    <div class="diagram-title">Service Health & Performance Monitoring</div>
+                    <div class="mermaid">
+                        graph LR
+                            subgraph "Service Health Checks"
+                                A[Health Check<br/>Every 30s]
+                                B[Response Time<br/>Monitoring]
+                                C[Error Rate<br/>Tracking]
+                                D[Resource Usage<br/>Monitoring]
+                            end
+                            
+                            subgraph "Performance Metrics"
+                                E[Request Count]
+                                F[Success Rate]
+                                G[Average Response Time]
+                                H[Peak Response Time]
+                            end
+                            
+                            subgraph "Alerting System"
+                                I[Threshold Alerts]
+                                J[Anomaly Detection]
+                                K[Escalation Rules]
+                                L[Multi-Channel Notifications]
+                            end
+                            
+                            subgraph "Analytics Dashboard"
+                                M[Real-time Metrics]
+                                N[Historical Trends]
+                                O[Performance Baselines]
+                                P[Capacity Planning]
+                            end
+                            
+                            A --> E
+                            B --> F
+                            C --> G
+                            D --> H
+                            
+                            E --> I
+                            F --> I
+                            G --> I
+                            H --> I
+                            
+                            I --> J
+                            J --> K
+                            K --> L
+                            
+                            E --> M
+                            F --> M
+                            G --> M
+                            H --> M
+                            
+                            M --> N
+                            N --> O
+                            O --> P
+                    </div>
+                </div>
+            </div>
+
+            <div id="techstack" class="section">
+                <h2>🏗️ Technology Stack Overview</h2>
+                <div class="diagram-container">
+                    <div class="diagram-title">Complete Technology Stack</div>
+                    <div class="mermaid">
+                        graph TB
+                            subgraph "Frontend"
+                                A[Tauri 2.0]
+                                B[React 18]
+                                C[TypeScript]
+                                D[Vite]
+                            end
+                            
+                            subgraph "Backend Services"
+                                E[FastAPI]
+                                F[Python 3.11]
+                                G[SQLite]
+                                H[Redis]
+                            end
+                            
+                            subgraph "AI & ML"
+                                I[Ollama]
+                                J[MCP Protocol]
+                                K[OpenCV]
+                                L[NumPy/SciPy]
+                            end
+                            
+                            subgraph "Infrastructure"
+                                M[Docker]
+                                N[Docker Compose]
+                                O[Linux Containers]
+                                P[Volume Mounts]
+                            end
+                            
+                            subgraph "Monitoring"
+                                Q[Prometheus]
+                                R[Grafana]
+                                S[Custom Metrics]
+                                T[Health Checks]
+                            end
+                            
+                            subgraph "Security"
+                                U[JWT Authentication]
+                                V[Rate Limiting]
+                                W[API Keys]
+                                X[Role-Based Access]
+                            end
+                            
+                            A --> E
+                            B --> E
+                            C --> E
+                            D --> E
+                            
+                            E --> F
+                            F --> G
+                            F --> H
+                            
+                            F --> I
+                            F --> J
+                            F --> K
+                            F --> L
+                            
+                            E --> M
+                            M --> N
+                            N --> O
+                            O --> P
+                            
+                            E --> Q
+                            Q --> R
+                            R --> S
+                            S --> T
+                            
+                            E --> U
+                            U --> V
+                            V --> W
+                            W --> X
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🎯 Key Features Summary</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h4>Core Capabilities</h4>
+                        <ul>
+                            <li>PDF Datasheet Processing</li>
+                            <li>Image Processing & Curve Extraction</li>
+                            <li>SPICE Model Generation</li>
+                            <li>AI Orchestration</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Production Features</h4>
+                        <ul>
+                            <li>Enterprise Authentication</li>
+                            <li>Batch Processing</li>
+                            <li>Version Control</li>
+                            <li>Test Correlation</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Infrastructure Features</h4>
+                        <ul>
+                            <li>Monitoring & Observability</li>
+                            <li>Data Analytics</li>
+                            <li>Rate Limiting</li>
+                            <li>Backup & Recovery</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4>Integration Features</h4>
+                        <ul>
+                            <li>Web Scraping</li>
+                            <li>Customization</li>
+                            <li>Notifications</li>
+                            <li>Export Capabilities</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true
+            },
+            sequence: {
+                useMaxWidth: true,
+                diagramMarginX: 50,
+                diagramMarginY: 10,
+                actorMargin: 50,
+                width: 150,
+                height: 65,
+                boxMargin: 10,
+                boxTextMargin: 5,
+                noteMargin: 10,
+                messageMargin: 35,
+                mirrorActors: true,
+                bottomMarginAdj: 1,
+                useMaxWidth: true,
+                rightAngles: false,
+                showSequenceNumbers: false
+            }
+        });
+    </script>
+</body>
+</html> 

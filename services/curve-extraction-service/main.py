@@ -128,6 +128,60 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def detect_graph_boundaries(image):
+    """Detect likely rectangular graph region with robust heuristics."""
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Canny + morphology to connect edges
+    edges = cv2.Canny(gray, 30, 100)
+    kernel = np.ones((3, 3), np.uint8)
+    edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
+
+    contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        h, w = image.shape[:2]
+        return np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype=np.float32)
+
+    # Prefer rectangular contours with reasonable aspect ratio
+    valid = []
+    for c in contours:
+        area = cv2.contourArea(c)
+        if area < 1000:
+            continue
+        epsilon = 0.02 * cv2.arcLength(c, True)
+        approx = cv2.approxPolyDP(c, epsilon, True)
+        if len(approx) == 4:
+            rect = cv2.minAreaRect(approx)
+            w, h = rect[1]
+            if w == 0 or h == 0:
+                continue
+            ar = max(w, h) / max(1.0, min(w, h))
+            if 0.5 <= ar <= 2.0:
+                valid.append(approx)
+
+    if not valid:
+        largest = max(contours, key=cv2.contourArea)
+        epsilon = 0.02 * cv2.arcLength(largest, True)
+        approx = cv2.approxPolyDP(largest, epsilon, True)
+        if len(approx) == 4:
+            return approx.reshape(4, 2).astype(np.float32)
+        x, y, w, h = cv2.boundingRect(largest)
+        return np.array([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], dtype=np.float32)
+
+    best = max(valid, key=cv2.contourArea)
+    return best.reshape(4, 2).astype(np.float32)
+
+def order_points(pts):
+    """Order points TL, TR, BR, BL for perspective transform."""
+    rect = np.zeros((4, 2), dtype=np.float32)
+    s = pts.sum(axis=1)
+    diff = np.diff(pts, axis=1)
+    rect[0] = pts[np.argmin(s)]
+    rect[2] = pts[np.argmax(s)]
+    rect[1] = pts[np.argmin(diff)]
+    rect[3] = pts[np.argmax(diff)]
+    return rect
+
 def auto_detect_grid_size(warped_image):
     """Auto-detect grid size using FFT analysis"""
     logger.debug("Starting grid size detection")
@@ -149,10 +203,592 @@ def auto_detect_grid_size(warped_image):
     logger.debug(f"Detected grid size: {grid_size}x{grid_size}")
     return grid_size, grid_size
 
+def process_image_enhanced(
+    image_data,
+    selected_colors_list,
+    x_min, x_max, y_min, y_max, x_scale, y_scale,
+    x_scale_type, y_scale_type,
+    min_size,
+    color_tolerance=0,
+    use_plot_area: bool = False,
+    use_annotation_mask: bool = False,
+    use_edge_guided: bool = False,
+    use_adaptive_binning: bool = False
+):
+    """Enhanced processing with perspective correction and plotting-area calibration."""
+    nparr = np.frombuffer(image_data, np.uint8)
+    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if image is None:
+        return None
+
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # Use legacy boundary detection (proven to work)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    if not contours:
+        return None
+        
+    largest_contour = max(contours, key=cv2.contourArea)
+    epsilon = 0.02 * cv2.arcLength(largest_contour, True)
+    approx = cv2.approxPolyDP(largest_contour, epsilon, True)
+    
+    if len(approx) != 4:
+        return None
+        
+    pts = approx.reshape(4, 2)
+    sums = pts.sum(axis=1)
+    diffs = np.diff(pts, axis=1).flatten()
+    rect = np.zeros((4, 2), dtype=np.float32)
+    rect[0] = pts[np.argmin(sums)]
+    rect[2] = pts[np.argmax(sums)]
+    rect[1] = pts[np.argmin(diffs)]
+    rect[3] = pts[np.argmax(diffs)]
+
+    warped_size = 1000
+    dst = np.array([[0, 0], [warped_size, 0], [warped_size, warped_size], [0, warped_size]], dtype=np.float32)
+    M = cv2.getPerspectiveTransform(rect, dst)
+    warped = cv2.warpPerspective(image, M, (warped_size, warped_size))
+
+    # Optional plotting area detection (simplified)
+    plot_w = plot_h = warped_size
+    off_x = off_y = 0
+    
+    if use_plot_area:
+        try:
+            warped_gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+            thresh = cv2.adaptiveThreshold(warped_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+            kernel_h = np.ones((1, 20), np.uint8)
+            kernel_v = np.ones((20, 1), np.uint8)
+            horizontal_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel_h)
+            vertical_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel_v)
+            grid_mask = cv2.bitwise_or(horizontal_lines, vertical_lines)
+            contours, _ = cv2.findContours(grid_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            if contours:
+                plotting_area = max(contours, key=cv2.contourArea)
+                x, y, w, h = cv2.boundingRect(plotting_area)
+                # Only use if the detected area is reasonable (>50% of image)
+                if w * h > 0.5 * warped_size * warped_size:
+                    pad = 20
+                    x = max(0, x - pad)
+                    y = max(0, y - pad)
+                    w = min(warped_size - x, w + 2 * pad)
+                    h = min(warped_size - y, h + 2 * pad)
+                    plot_w, plot_h = w, h
+                    off_x, off_y = x, y
+        except Exception as e:
+            logger.warning(f"Plot area detection failed: {e}")
+
+    curve_data = {}
+    base_color_points = defaultdict(list)
+
+    # Which colors to process
+    if selected_colors_list:
+        selected_base = {color_to_base.get(c, c) for c in selected_colors_list}
+        colors_to_process = [name for name in color_ranges.keys() if color_to_base.get(name, name) in selected_base]
+    else:
+        colors_to_process = list(color_ranges.keys())
+    
+    if not colors_to_process:
+        colors_to_process = list(color_ranges.keys())
+
+    for color_name in colors_to_process:
+        lower, upper = color_ranges[color_name]
+        
+        # Apply tolerance expansion to HSV bounds
+        if color_tolerance and color_tolerance > 0:
+            l = np.array(lower, dtype=np.int32)
+            u = np.array(upper, dtype=np.int32)
+            tol_h = max(1, color_tolerance // 3)
+            tol_sv = color_tolerance
+            l = np.array([max(0, l[0] - tol_h), max(0, l[1] - tol_sv), max(0, l[2] - tol_sv)])
+            u = np.array([min(180, u[0] + tol_h), min(255, u[1] + tol_sv), min(255, u[2] + tol_sv)])
+            lower_adj = l.astype(np.uint8)
+            upper_adj = u.astype(np.uint8)
+        else:
+            lower_adj = np.array(lower)
+            upper_adj = np.array(upper)
+            
+        mask = cv2.inRange(hsv_image, lower_adj, upper_adj)
+        warped_mask = cv2.warpPerspective(mask, M, (warped_size, warped_size))
+
+        # Legacy-style processing with proven parameters
+        kernel = np.ones((3, 3), np.uint8)
+        cleaned = cv2.morphologyEx(warped_mask, cv2.MORPH_OPEN, kernel)
+        cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, kernel)
+        
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(cleaned)
+        filtered = np.zeros_like(warped_mask)
+        for i in range(1, num_labels):
+            if stats[i, cv2.CC_STAT_AREA] >= min_size:
+                filtered[labels == i] = 255
+
+        ys, xs = np.where(filtered > 0)
+        if len(xs) == 0:
+            continue
+
+        # Adjust to plotting area if detected
+        xs = xs - off_x
+        ys = ys - off_y
+        valid = (xs >= 0) & (xs < plot_w) & (ys >= 0) & (ys < plot_h)
+        xs = xs[valid]
+        ys = ys[valid]
+        if len(xs) == 0:
+            continue
+
+        # Legacy coordinate mapping (proven to work)
+        if x_scale_type == 'linear':
+            logical_x = xs * (x_max - x_min) / max(1, plot_w) + x_min
+        else:
+            f = xs / max(1, plot_w)
+            log_x = np.log10(max(x_min, 1e-6)) + f * (np.log10(x_max) - np.log10(max(x_min, 1e-6)))
+            logical_x = 10 ** log_x
+
+        if y_scale_type == 'linear':
+            logical_y = (plot_h - ys) * (y_max - y_min) / max(1, plot_h) + y_min
+        else:
+            f = (plot_h - ys) / max(1, plot_h)
+            log_y = np.log10(max(y_min, 1e-6)) + f * (np.log10(y_max) - np.log10(max(y_min, 1e-6)))
+            logical_y = 10 ** log_y
+
+        base = color_to_base.get(color_name, color_name)
+        base_color_points[base].extend(zip(logical_x, logical_y))
+
+    # Legacy-style binning and smoothing
+    for base_color, points in base_color_points.items():
+        if not points:
+            continue
+
+        all_x, all_y = zip(*points)
+        data_bins = defaultdict(list)
+        for lx, ly in zip(all_x, all_y):
+            bin_x = round(lx / BIN_SIZE) * BIN_SIZE
+            data_bins[bin_x].append(ly)
+
+        final_x, final_y = [], []
+        for x_val, y_vals in sorted(data_bins.items()):
+            y_vals = np.array(y_vals)
+            if len(y_vals) == 0:
+                continue
+            median = np.median(y_vals)
+            mad = np.median(np.abs(y_vals - median)) + 1e-6
+            filtered = y_vals[np.abs(y_vals - median) < 2 * mad]
+            if np.std(filtered) > 0.3:
+                continue
+            if len(filtered) > 0:
+                final_x.append(x_val)
+                final_y.append(np.mean(filtered))
+
+        # Legacy fixed smoothing windows
+        smooth_win = 21 if base_color == 'red' else 17 if base_color == 'blue' else 13
+        if len(final_y) > smooth_win:
+            smooth_y = savgol_filter(final_y, smooth_win, SMOOTH_POLYORDER)
+        else:
+            smooth_y = final_y
+
+        curve_data[base_color] = {
+            'x': [x * x_scale for x in final_x],
+            'y': [y * y_scale for y in (smooth_y.tolist() if hasattr(smooth_y, 'tolist') else smooth_y)]
+        }
+
+    return curve_data
+
+def process_image_simplified_enhanced(
+    image_data,
+    selected_colors_list,
+    x_min, x_max, y_min, y_max, x_scale, y_scale,
+    x_scale_type, y_scale_type,
+    min_size,
+    color_tolerance=0,
+    use_plot_area: bool = False
+):
+    """Simplified enhanced processing - combines legacy reliability with modern features"""
+    nparr = np.frombuffer(image_data, np.uint8)
+    image = cv2.imdecode(nparr, np.uint8)
+    if image is None:
+        return None
+
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # Use legacy boundary detection (proven to work)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    if not contours:
+        return None
+        
+    largest_contour = max(contours, key=cv2.contourArea)
+    epsilon = 0.02 * cv2.arcLength(largest_contour, True)
+    approx = cv2.approxPolyDP(largest_contour, epsilon, True)
+    
+    if len(approx) != 4:
+        return None
+        
+    pts = approx.reshape(4, 2)
+    sums = pts.sum(axis=1)
+    diffs = np.diff(pts, axis=1).flatten()
+    rect = np.zeros((4, 2), dtype=np.float32)
+    rect[0] = pts[np.argmin(sums)]
+    rect[2] = pts[np.argmax(sums)]
+    rect[1] = pts[np.argmin(diffs)]
+    rect[3] = pts[np.argmax(diffs)]
+
+    warped_size = 1000
+    dst = np.array([[0, 0], [warped_size, 0], [warped_size, warped_size], [0, warped_size]], dtype=np.float32)
+    M = cv2.getPerspectiveTransform(rect, dst)
+    warped = cv2.warpPerspective(image, M, (warped_size, warped_size))
+
+    # Optional plotting area detection (simplified)
+    plot_w = plot_h = warped_size
+    off_x = off_y = 0
+    
+    if use_plot_area:
+        try:
+            warped_gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+            thresh = cv2.adaptiveThreshold(warped_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+            kernel_h = np.ones((1, 20), np.uint8)
+            kernel_v = np.ones((20, 1), np.uint8)
+            horizontal_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel_h)
+            vertical_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel_v)
+            grid_mask = cv2.bitwise_or(horizontal_lines, vertical_lines)
+            contours, _ = cv2.findContours(grid_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            if contours:
+                plotting_area = max(contours, key=cv2.contourArea)
+                x, y, w, h = cv2.boundingRect(plotting_area)
+                # Only use if the detected area is reasonable (>50% of image)
+                if w * h > 0.5 * warped_size * warped_size:
+                    pad = 20
+                    x = max(0, x - pad)
+                    y = max(0, y - pad)
+                    w = min(warped_size - x, w + 2 * pad)
+                    h = min(warped_size - y, h + 2 * pad)
+                    plot_w, plot_h = w, h
+                    off_x, off_y = x, y
+        except Exception as e:
+            logger.warning(f"Plot area detection failed: {e}")
+
+    curve_data = {}
+    base_color_points = defaultdict(list)
+
+    # Which colors to process
+    if selected_colors_list:
+        selected_base = {color_to_base.get(c, c) for c in selected_colors_list}
+        colors_to_process = [name for name in color_ranges.keys() if color_to_base.get(name, name) in selected_base]
+    else:
+        colors_to_process = list(color_ranges.keys())
+    
+    if not colors_to_process:
+        colors_to_process = list(color_ranges.keys())
+
+    for color_name in colors_to_process:
+        lower, upper = color_ranges[color_name]
+        
+        # Apply tolerance expansion to HSV bounds
+        if color_tolerance and color_tolerance > 0:
+            l = np.array(lower, dtype=np.int32)
+            u = np.array(upper, dtype=np.int32)
+            tol_h = max(1, color_tolerance // 3)
+            tol_sv = color_tolerance
+            l = np.array([max(0, l[0] - tol_h), max(0, l[1] - tol_sv), max(0, l[2] - tol_sv)])
+            u = np.array([min(180, u[0] + tol_h), min(255, u[1] + tol_sv), min(255, u[2] + tol_sv)])
+            lower_adj = l.astype(np.uint8)
+            upper_adj = u.astype(np.uint8)
+        else:
+            lower_adj = np.array(lower)
+            upper_adj = np.array(upper)
+            
+        mask = cv2.inRange(hsv_image, lower_adj, upper_adj)
+        warped_mask = cv2.warpPerspective(mask, M, (warped_size, warped_size))
+
+        # Legacy-style processing with proven parameters
+        kernel = np.ones((3, 3), np.uint8)
+        cleaned = cv2.morphologyEx(warped_mask, cv2.MORPH_OPEN, kernel)
+        cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, kernel)
+        
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(cleaned)
+        filtered = np.zeros_like(warped_mask)
+        for i in range(1, num_labels):
+            if stats[i, cv2.CC_STAT_AREA] >= min_size:
+                filtered[labels == i] = 255
+
+        ys, xs = np.where(filtered > 0)
+        if len(xs) == 0:
+            continue
+
+        # Adjust to plotting area if detected
+        xs = xs - off_x
+        ys = ys - off_y
+        valid = (xs >= 0) & (xs < plot_w) & (ys >= 0) & (ys < plot_h)
+        xs = xs[valid]
+        ys = ys[valid]
+        if len(xs) == 0:
+            continue
+
+        # Legacy coordinate mapping (proven to work)
+        if x_scale_type == 'linear':
+            logical_x = xs * (x_max - x_min) / max(1, plot_w) + x_min
+        else:
+            f = xs / max(1, plot_w)
+            log_x = np.log10(max(x_min, 1e-6)) + f * (np.log10(x_max) - np.log10(max(x_min, 1e-6)))
+            logical_x = 10 ** log_x
+
+        if y_scale_type == 'linear':
+            logical_y = (plot_h - ys) * (y_max - y_min) / max(1, plot_h) + y_min
+        else:
+            f = (plot_h - ys) / max(1, plot_h)
+            log_y = np.log10(max(y_min, 1e-6)) + f * (np.log10(y_max) - np.log10(max(y_min, 1e-6)))
+            logical_y = 10 ** log_y
+
+        base = color_to_base.get(color_name, color_name)
+        base_color_points[base].extend(zip(logical_x, logical_y))
+
+    # Legacy-style binning and smoothing
+    for base_color, points in base_color_points.items():
+        if not points:
+            continue
+
+        all_x, all_y = zip(*points)
+        data_bins = defaultdict(list)
+        for lx, ly in zip(all_x, all_y):
+            bin_x = round(lx / BIN_SIZE) * BIN_SIZE
+            data_bins[bin_x].append(ly)
+
+        final_x, final_y = [], []
+        for x_val, y_vals in sorted(data_bins.items()):
+            y_vals = np.array(y_vals)
+            if len(y_vals) == 0:
+                continue
+            median = np.median(y_vals)
+            mad = np.median(np.abs(y_vals - median)) + 1e-6
+            filtered = y_vals[np.abs(y_vals - median) < 2 * mad]
+            if np.std(filtered) > 0.3:
+                continue
+            if len(filtered) > 0:
+                final_x.append(x_val)
+                final_y.append(np.mean(filtered))
+
+        # Legacy fixed smoothing windows
+        smooth_win = 21 if base_color == 'red' else 17 if base_color == 'blue' else 13
+        if len(final_y) > smooth_win:
+            smooth_y = savgol_filter(final_y, smooth_win, SMOOTH_POLYORDER)
+        else:
+            smooth_y = final_y
+
+        curve_data[base_color] = {
+            'x': [x * x_scale for x in final_x],
+            'y': [y * y_scale for y in (smooth_y.tolist() if hasattr(smooth_y, 'tolist') else smooth_y)]
+        }
+
+    return curve_data
+
+def compute_warp_and_plot_area(image):
+    """Compute perspective warp, plotting area and annotation mask.
+    Returns (M, warped_size, off_x, off_y, plot_w, plot_h, annotation_mask).
+    """
+    # Detect overall graph boundaries and rectify
+    boundaries = detect_graph_boundaries(image)
+    rect = order_points(boundaries)
+
+    warped_size = 1000
+    dst = np.array([[0, 0], [warped_size, 0], [warped_size, warped_size], [0, warped_size]], dtype=np.float32)
+    M = cv2.getPerspectiveTransform(rect, dst)
+    warped = cv2.warpPerspective(image, M, (warped_size, warped_size))
+
+    # Detect plotting area
+    warped_gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+    thresh = cv2.adaptiveThreshold(warped_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+    kernel_h = np.ones((1, 20), np.uint8)
+    kernel_v = np.ones((20, 1), np.uint8)
+    horizontal_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel_h)
+    vertical_lines = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel_v)
+    grid_mask = cv2.bitwise_or(horizontal_lines, vertical_lines)
+    contours, _ = cv2.findContours(grid_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if contours:
+        plotting_area = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(plotting_area)
+        pad = 20
+        x = max(0, x - pad)
+        y = max(0, y - pad)
+        w = min(warped_size - x, w + 2 * pad)
+        h = min(warped_size - y, h + 2 * pad)
+        plot_w, plot_h = w, h
+        off_x, off_y = x, y
+    else:
+        plot_w = plot_h = warped_size
+        off_x = off_y = 0
+
+    # Build annotation mask (legend/tick labels)
+    annotation_mask = np.zeros((warped_size, warped_size), dtype=np.uint8)
+    roi = warped[off_y:off_y+plot_h, off_x:off_x+plot_w]
+    roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    white_regions = cv2.inRange(roi_hsv, np.array([0, 0, 200]), np.array([180, 50, 255]))
+    dark_text = cv2.inRange(roi_hsv, np.array([0, 0, 0]), np.array([180, 60, 80]))
+    anno_roi = cv2.bitwise_or(white_regions, dark_text)
+    kernel5 = np.ones((5, 5), np.uint8)
+    anno_roi = cv2.morphologyEx(anno_roi, cv2.MORPH_CLOSE, kernel5)
+    num, labels, stats, _ = cv2.connectedComponentsWithStats(anno_roi)
+    anno_clean = np.zeros_like(anno_roi)
+    roi_area = plot_w * plot_h
+    for i in range(1, num):
+        area = stats[i, cv2.CC_STAT_AREA]
+        if area >= max(50, int(roi_area * 0.002)) and area <= int(roi_area * 0.15):
+            x_i, y_i, w_i, h_i, _ = stats[i]
+            cv2.rectangle(anno_clean, (x_i, y_i), (x_i + w_i, y_i + h_i), 255, thickness=-1)
+    band_x = max(2, int(plot_w * 0.04))
+    band_y = max(2, int(plot_h * 0.05))
+    anno_clean[:, :band_x] = 255
+    anno_clean[plot_h-band_y:, :] = 255
+    annotation_mask[off_y:off_y+plot_h, off_x:off_x+plot_w] = anno_clean
+
+    return M, warped_size, off_x, off_y, plot_w, plot_h, annotation_mask
+
+def process_image_autocolor(
+    image_data,
+    x_min, x_max, y_min, y_max, x_scale, y_scale,
+    x_scale_type, y_scale_type,
+    min_size,
+    max_clusters=5
+):
+    """Alternative approach: color-agnostic clustering in HSV inside plotting area."""
+    nparr = np.frombuffer(image_data, np.uint8)
+    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if image is None:
+        return None
+
+    try:
+        M, warped_size, off_x, off_y, plot_w, plot_h, annotation_mask = compute_warp_and_plot_area(image)
+    except Exception as e:
+        logger.error(f"Auto-color calibration failed: {e}")
+        return None
+
+    warped = cv2.warpPerspective(image, M, (warped_size, warped_size))
+    roi = warped[off_y:off_y+plot_h, off_x:off_x+plot_w]
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
+    # Focus on colored pixels: medium-to-high saturation, medium value
+    sat_min = 40
+    val_min = 40
+    color_mask = (hsv[:, :, 1] >= sat_min) & (hsv[:, :, 2] >= val_min)
+    # Remove annotation regions
+    anno_roi = annotation_mask[off_y:off_y+plot_h, off_x:off_x+plot_w] > 0
+    color_mask = color_mask & (~anno_roi)
+
+    if not np.any(color_mask):
+        return {}
+
+    # Prepare data for kmeans
+    hsv_pixels = hsv[color_mask]
+    # Limit sample size for kmeans
+    max_samples = 25000
+    if hsv_pixels.shape[0] > max_samples:
+        idx = np.random.choice(hsv_pixels.shape[0], max_samples, replace=False)
+        sample = hsv_pixels[idx]
+    else:
+        sample = hsv_pixels
+
+    Z = sample.astype(np.float32)
+    K = max(2, min(max_clusters, 6))
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 1.0)
+    attempts = 3
+    compactness, labels, centers = cv2.kmeans(Z, K, None, criteria, attempts, cv2.KMEANS_PP_CENTERS)
+
+    # Assign each pixel in ROI to nearest center
+    hsv_flat = hsv.reshape((-1, 3)).astype(np.float32)
+    # Compute distances to centers (weighted HSV distance)
+    dist_stack = []
+    for c in centers:
+        d = np.linalg.norm(hsv_flat - c, axis=1)
+        dist_stack.append(d)
+    dist_stack = np.stack(dist_stack, axis=1)
+    nearest = np.argmin(dist_stack, axis=1).reshape(hsv.shape[:2])
+
+    curves = {}
+    kernel = np.ones((3, 3), np.uint8)
+    for k in range(len(centers)):
+        mask_k = (nearest == k)
+        # Keep only colored mask within ROI and outside annotations
+        mk = np.zeros_like(mask_k, dtype=np.uint8)
+        mk[mask_k & color_mask] = 255
+        mk = cv2.morphologyEx(mk, cv2.MORPH_OPEN, kernel)
+        mk = cv2.morphologyEx(mk, cv2.MORPH_CLOSE, kernel)
+
+        # Filter small components
+        num_labels, labels_i, stats, _ = cv2.connectedComponentsWithStats(mk)
+        filtered = np.zeros_like(mk)
+        for i in range(1, num_labels):
+            if stats[i, cv2.CC_STAT_AREA] >= min_size:
+                filtered[labels_i == i] = 255
+
+        ys, xs = np.where(filtered > 0)
+        if len(xs) == 0:
+            continue
+
+        # Map to logical coords
+        if x_scale_type == 'linear':
+            logical_x = xs * (x_max - x_min) / max(1, plot_w) + x_min
+        else:
+            f = xs / max(1, plot_w)
+            log_x = np.log10(max(x_min, 1e-6)) + f * (np.log10(x_max) - np.log10(max(x_min, 1e-6)))
+            logical_x = 10 ** log_x
+        if y_scale_type == 'linear':
+            logical_y = (plot_h - ys) * (y_max - y_min) / max(1, plot_h) + y_min
+        else:
+            f = (plot_h - ys) / max(1, plot_h)
+            log_y = np.log10(max(y_min, 1e-6)) + f * (np.log10(y_max) - np.log10(max(y_min, 1e-6)))
+            logical_y = 10 ** log_y
+
+        # Aggregate/bin/smooth
+        data_bins = defaultdict(list)
+        for lx, ly in zip(logical_x, logical_y):
+            bin_x = round(lx / BIN_SIZE) * BIN_SIZE
+            data_bins[bin_x].append(ly)
+
+        final_x, final_y = [], []
+        for x_val, y_vals in sorted(data_bins.items()):
+            y_vals = np.array(y_vals)
+            if len(y_vals) == 0:
+                continue
+            median = np.median(y_vals)
+            mad = np.median(np.abs(y_vals - median)) + 1e-6
+            filtered_y = y_vals[np.abs(y_vals - median) < 2 * mad]
+            if np.std(filtered_y) > 0.3:
+                continue
+            if len(filtered_y) > 0:
+                final_x.append(x_val)
+                final_y.append(np.mean(filtered_y))
+
+        if not final_x:
+            continue
+        if len(final_y) > 13:
+            smooth_y = savgol_filter(final_y, 13, 3)
+        else:
+            smooth_y = final_y
+
+        # Derive display color from center
+        c = centers[k]
+        # Convert HSV center to RGB for hex
+        hsv_color = np.uint8([[c]])
+        rgb_color = cv2.cvtColor(hsv_color, cv2.COLOR_HSV2RGB)[0, 0]
+        hex_color = f"#{int(rgb_color[0]):02x}{int(rgb_color[1]):02x}{int(rgb_color[2]):02x}"
+
+        curves[f"cluster_{k+1}"] = {
+            'x': [x * x_scale for x in final_x],
+            'y': [y * y_scale for y in (smooth_y if isinstance(smooth_y, list) else smooth_y.tolist())],
+            'color': hex_color
+        }
+
+    return curves
+
 def process_image_legacy(image_data, graph_type, x_axis_name, y_axis_name, third_column_name, 
                         x_min, x_max, y_min, y_max, x_scale, y_scale, representations, 
                         x_scale_type, y_scale_type, min_size):
-    """Process image using legacy algorithm"""
+    """Process image using legacy algorithm - EXACTLY matching legacy GUI behavior"""
     logger.debug("Processing image with legacy algorithm")
     
     # Convert bytes to numpy array
@@ -194,6 +830,7 @@ def process_image_legacy(image_data, graph_type, x_axis_name, y_axis_name, third
     M = cv2.getPerspectiveTransform(rect, dst)
     warped = cv2.warpPerspective(image, M, (warped_size, warped_size))
     
+    # Note: Legacy doesn't actually use the grid size detection result
     rows, cols = auto_detect_grid_size(warped)
     logger.info(f"Estimated grid size: {rows}x{cols}")
     
@@ -207,6 +844,7 @@ def process_image_legacy(image_data, graph_type, x_axis_name, y_axis_name, third
         mask = cv2.inRange(hsv_image, lower, upper)
         warped_mask = cv2.warpPerspective(mask, M, (warped_size, warped_size))
         
+        # Legacy uses fixed smoothing windows based on color
         smooth_win = 21 if color_name in ['red', 'red2'] else 17 if color_name == 'blue' else 13
         kernel = np.ones((3, 3), np.uint8)
         cleaned_mask = cv2.morphologyEx(warped_mask, cv2.MORPH_OPEN, kernel)
@@ -223,6 +861,7 @@ def process_image_legacy(image_data, graph_type, x_axis_name, y_axis_name, third
             continue
         logger.debug(f"Detected {len(xs)} points for color {color_name}")
 
+        # Legacy coordinate mapping - SIMPLE and DIRECT
         if x_scale_type == 'linear':
             logical_x = xs * (x_max - x_min) / warped_size + x_min
         else:
@@ -269,6 +908,7 @@ def process_image_legacy(image_data, graph_type, x_axis_name, y_axis_name, third
                 final_x.append(x_val)
                 final_y.append(np.mean(filtered))
         
+        # Legacy uses fixed smoothing windows based on base color
         smooth_win = 21 if base_color == 'red' else 17 if base_color == 'blue' else 13
         if len(final_y) > smooth_win:
             smooth_y = savgol_filter(final_y, smooth_win, SMOOTH_POLYORDER)
@@ -425,52 +1065,58 @@ async def health_check():
     return {"status": "healthy", "service": "curve-extraction", "version": "2.0.0"}
 
 @app.post("/api/curve-extraction/detect-colors")
-async def detect_colors(file: UploadFile = File(...)):
-    """Detect colors in uploaded image"""
+async def detect_colors(
+    file: UploadFile = File(...),
+    color_tolerance: int = Form(0)
+):
+    """Detect colors in uploaded image (legacy-strict by default).
+    Matches legacy GUI behavior: simple HSV band check per color and dedupe via base color.
+    """
     try:
         image_data = await file.read()
-        
-        # Convert to numpy array
+
         nparr = np.frombuffer(image_data, np.uint8)
         image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
         if image is None:
             raise HTTPException(status_code=400, detail="Invalid image file")
-        
+
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+        detected_set = set()
         detected_colors = []
-        
+
         for color_name, (lower, upper) in color_ranges.items():
-            mask = cv2.inRange(hsv_image, np.array(lower), np.array(upper))
+            # Optional tolerance expansion only if explicitly requested
+            if color_tolerance and color_tolerance > 0:
+                l = np.array(lower, dtype=np.int32)
+                u = np.array(upper, dtype=np.int32)
+                tol_h = max(1, color_tolerance // 3)
+                tol_sv = max(5, color_tolerance)
+                lower_arr = np.array([max(0, l[0] - tol_h), max(0, l[1] - tol_sv), max(0, l[2] - tol_sv)], dtype=np.uint8)
+                upper_arr = np.array([min(180, u[0] + tol_h), min(255, u[1] + tol_sv), min(255, u[2] + tol_sv)], dtype=np.uint8)
+            else:
+                lower_arr = np.array(lower, dtype=np.uint8)
+                upper_arr = np.array(upper, dtype=np.uint8)
+
+            mask = cv2.inRange(hsv_image, lower_arr, upper_arr)
             if np.any(mask):
-                # Calculate color statistics
-                ys, xs = np.where(mask > 0)
-                pixel_count = len(xs)
-                
-                if pixel_count > 500:  # Minimum threshold
-                    # Get average color
-                    color_pixels = image[mask > 0]
-                    avg_color = np.mean(color_pixels, axis=0)
-                    hex_color = f"#{int(avg_color[2]):02x}{int(avg_color[1]):02x}{int(avg_color[0]):02x}"
-                    
-                    detected_colors.append({
-                        "name": color_name,
-                        "display_name": color_name.capitalize(),
-                        "color": hex_color,
-                        "pixel_count": int(pixel_count),
-                        "confidence": min(pixel_count / 1000, 1.0)
-                    })
-        
-        # Sort by pixel count
+                base = color_to_base.get(color_name, color_name)
+                if base in detected_set:
+                    continue
+                detected_set.add(base)
+                detected_colors.append({
+                    'name': base,
+                    'display_name': base.capitalize(),
+                    'color': display_colors.get(base, '#000000'),
+                    'pixel_count': int(np.count_nonzero(mask)),
+                    'confidence': 1.0
+                })
+
+        # Sort by pixel count descending to keep UI behavior sensible
         detected_colors.sort(key=lambda x: x['pixel_count'], reverse=True)
-        
-        return {
-            "success": True,
-            "data": {
-                "detected_colors": detected_colors
-            }
-        }
-        
+
+        return { 'success': True, 'data': { 'detected_colors': detected_colors } }
+
     except Exception as e:
         logger.error(f"Color detection failed: {e}")
         raise HTTPException(status_code=500, detail=f"Color detection failed: {str(e)}")
@@ -487,96 +1133,145 @@ async def extract_curves(
     y_scale: float = Form(...),
     x_scale_type: str = Form("linear"),
     y_scale_type: str = Form("linear"),
-    min_size: int = Form(100),
+    min_size: int = Form(1000),
     detection_sensitivity: int = Form(5),
-    color_tolerance: int = Form(20),
+    color_tolerance: int = Form(0),  # Default to 0 for legacy compatibility
     smoothing_factor: int = Form(3),
     x_axis_name: str = Form("X-Axis"),
-    y_axis_name: str = Form("Y-Axis")
+    y_axis_name: str = Form("Y-Axis"),
+    mode: str = Form("legacy"),  # Default to legacy for reliability
+    use_plot_area: bool = Form(False),
+    use_annotation_mask: bool = Form(False),
+    use_edge_guided: bool = Form(False),
+    use_adaptive_binning: bool = Form(False),
+    use_auto_color: bool = Form(False)
 ):
-    """Extract curves using standard algorithm"""
+    """Extract curves using optimized algorithm with legacy fallback"""
     try:
         start_time = datetime.now()
         image_data = await file.read()
         selected_colors_list = json.loads(selected_colors)
-        
-        # Use enhanced web-based algorithm
+        curves_map = {}
+
+        # Validate scale bounds for log scales (legacy semantics)
+        if x_scale_type == "log" and (x_min <= 0 or x_max <= 0):
+            raise HTTPException(status_code=400, detail="X-axis must be positive for log scale")
+        if y_scale_type == "log" and (y_min <= 0 or y_max <= 0):
+            raise HTTPException(status_code=400, detail="Y-axis must be positive for log scale")
+
+        # Strategy 1: Try legacy first (most reliable)
+        if mode == "legacy" or mode == "auto":
+            logger.info("Attempting legacy extraction")
+            legacy_data, _ = process_image_legacy(
+                image_data,
+                'custom',
+                'X', 'Y', 'Label',
+                x_min, x_max, y_min, y_max,
+                x_scale, y_scale,
+                {},
+                x_scale_type, y_scale_type, min_size
+            )
+            curves_map = legacy_data if legacy_data else {}
+            if curves_map:
+                logger.info(f"Legacy extraction successful: {len(curves_map)} curves")
+            else:
+                logger.info("Legacy extraction failed, trying enhanced")
+
+        # Strategy 2: Try enhanced with conservative settings
+        if not curves_map and (mode == "enhanced" or mode == "auto"):
+            logger.info("Attempting enhanced extraction with conservative settings")
+            enhanced = process_image_enhanced(
+                image_data,
+                selected_colors_list,
+                x_min, x_max, y_min, y_max, x_scale, y_scale,
+                x_scale_type, y_scale_type,
+                min_size,
+                color_tolerance=0,  # No tolerance for better accuracy
+                use_plot_area=False,  # Disable plot area detection initially
+                use_annotation_mask=False,
+                use_edge_guided=False,
+                use_adaptive_binning=False
+            )
+            curves_map = enhanced if enhanced else {}
+
+        # Strategy 3: Try enhanced with relaxed settings
+        if not curves_map and (mode == "enhanced" or mode == "auto"):
+            logger.info("Attempting enhanced extraction with relaxed settings")
+            try_min_size = max(100, int(min_size * 0.5))
+            try_color_tol = 10  # Small tolerance
+            enhanced_relaxed = process_image_enhanced(
+                image_data,
+                selected_colors_list,
+                x_min, x_max, y_min, y_max, x_scale, y_scale,
+                x_scale_type, y_scale_type,
+                try_min_size,
+                color_tolerance=try_color_tol,
+                use_plot_area=True,  # Enable plot area detection
+                use_annotation_mask=False,
+                use_edge_guided=False,
+                use_adaptive_binning=False
+            )
+            curves_map = enhanced_relaxed if enhanced_relaxed else {}
+
+        # Strategy 4: Try enhanced with very relaxed settings
+        if not curves_map and (mode == "enhanced" or mode == "auto"):
+            logger.info("Attempting enhanced extraction with very relaxed settings")
+            try_min_size = max(50, int(min_size * 0.2))
+            try_color_tol = 20
+            enhanced_very_relaxed = process_image_enhanced(
+                image_data,
+                selected_colors_list,
+                x_min, x_max, y_min, y_max, x_scale, y_scale,
+                x_scale_type, y_scale_type,
+                try_min_size,
+                color_tolerance=try_color_tol,
+                use_plot_area=True,
+                use_annotation_mask=False,
+                use_edge_guided=False,
+                use_adaptive_binning=False
+            )
+            curves_map = enhanced_very_relaxed if enhanced_very_relaxed else {}
+
+        # Strategy 5: Final fallback to auto-color clustering
+        if not curves_map and use_auto_color:
+            logger.info("Attempting auto-color clustering as final fallback")
+            auto_curves = process_image_autocolor(
+                image_data,
+                x_min, x_max, y_min, y_max, x_scale, y_scale,
+                x_scale_type, y_scale_type,
+                max(50, int(min_size * 0.1))
+            )
+            curves_map = auto_curves if auto_curves else {}
+
+        # Convert to expected format
         curves = []
         total_points = 0
-        
-        # Convert to numpy array
-        nparr = np.frombuffer(image_data, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        if image is None:
-            raise HTTPException(status_code=400, detail="Invalid image file")
-        
-        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        
-        for color_name in selected_colors_list:
-            if color_name in color_ranges:
-                lower, upper = color_ranges[color_name]
-                mask = cv2.inRange(hsv_image, np.array(lower), np.array(upper))
-                
-                # Apply morphological operations
-                kernel = np.ones((3, 3), np.uint8)
-                cleaned_mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-                
-                # Find connected components
-                num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(cleaned_mask)
-                filtered_mask = np.zeros_like(cleaned_mask)
-                
-                for i in range(1, num_labels):
-                    if stats[i, cv2.CC_STAT_AREA] >= min_size:
-                        filtered_mask[labels == i] = 255
-                
-                # Extract points
-                ys, xs = np.where(filtered_mask > 0)
-                if len(xs) > 0:
-                    # Calculate actual average color from detected pixels
-                    color_pixels = image[filtered_mask > 0]
-                    avg_color = np.mean(color_pixels, axis=0)
-                    actual_color = f"#{int(avg_color[2]):02x}{int(avg_color[1]):02x}{int(avg_color[0]):02x}"
-                    
-                    # Convert to logical coordinates
-                    if x_scale_type == 'linear':
-                        logical_x = xs * (x_max - x_min) / image.shape[1] + x_min
-                    else:
-                        f = xs / image.shape[1]
-                        log_x = np.log10(x_min) + f * (np.log10(x_max) - np.log10(x_min))
-                        logical_x = 10 ** log_x
-                    
-                    if y_scale_type == 'linear':
-                        logical_y = (image.shape[0] - ys) * (y_max - y_min) / image.shape[0] + y_min
-                    else:
-                        f = (image.shape[0] - ys) / image.shape[0]
-                        log_y = np.log10(y_min) + f * (np.log10(y_max) - np.log10(y_min))
-                        logical_y = 10 ** log_y
-                    
-                    # Process points
-                    points = []
-                    for i in range(len(logical_x)):
-                        if (x_min <= logical_x[i] <= x_max and 
-                            y_min <= logical_y[i] <= y_max):
-                            points.append({
-                                'x': logical_x[i] * x_scale,
-                                'y': logical_y[i] * y_scale,
-                                'confidence': 0.9
-                            })
-                    
-                    if points:
-                        curves.append({
-                            'name': color_name,
-                            'color': actual_color,  # Use actual detected color
-                            'points': points,
-                            'representation': color_name,
-                            'pointCount': len(points)
-                        })
-                        total_points += len(points)
-        
+        for color_name, data in curves_map.items():
+            xs = data.get('x', [])
+            ys = data.get('y', [])
+            if xs and ys and len(xs) == len(ys):
+                pts = [{ 'x': float(x), 'y': float(y), 'confidence': 0.95 } for x, y in zip(xs, ys)]
+                curves.append({
+                    'name': color_name,
+                    'color': data.get('color', display_colors.get(color_name, '#000000')),
+                    'points': pts,
+                    'representation': color_name,
+                    'pointCount': len(pts)
+                })
+                total_points += len(pts)
+
         processing_time = (datetime.now() - start_time).total_seconds()
-        
-        # Create plot image
+
+        # Determine extraction method used
+        extraction_method = "unknown"
+        if curves_map:
+            if mode == "legacy":
+                extraction_method = "legacy"
+            elif "cluster_" in next(iter(curves_map.keys()), ""):
+                extraction_method = "auto-color"
+            else:
+                extraction_method = "enhanced"
+
         plot_image = create_plot_image(curves, {
             'x_axis_name': x_axis_name,
             'y_axis_name': y_axis_name,
@@ -587,18 +1282,25 @@ async def extract_curves(
             'x_scale_type': x_scale_type,
             'y_scale_type': y_scale_type
         })
-        
+
         return {
-            "success": True,
-            "data": {
-                "curves": curves,
-                "total_points": total_points,
-                "processing_time": processing_time,
-                "success": len(curves) > 0,
-                "plot_image": plot_image,
-                "metadata": {
-                    "extraction_method": "standard",
-                    "quality_score": len(curves) / len(selected_colors_list) if selected_colors_list else 0
+            'success': True,
+            'data': {
+                'curves': curves,
+                'total_points': total_points,
+                'processing_time': processing_time,
+                'success': len(curves) > 0,
+                'plot_image': plot_image,
+                'metadata': {
+                    'extraction_method': extraction_method,
+                    'quality_score': len(curves) / len(selected_colors_list) if selected_colors_list else 0,
+                    'strategies_tried': [
+                        'legacy' if mode in ['legacy', 'auto'] else None,
+                        'enhanced_conservative' if mode in ['enhanced', 'auto'] else None,
+                        'enhanced_relaxed' if mode in ['enhanced', 'auto'] else None,
+                        'enhanced_very_relaxed' if mode in ['enhanced', 'auto'] else None,
+                        'auto_color' if use_auto_color else None
+                    ]
                 }
             }
         }
@@ -619,9 +1321,9 @@ async def extract_curves_legacy(
     y_scale: float = Form(...),
     x_scale_type: str = Form("linear"),
     y_scale_type: str = Form("linear"),
-    min_size: int = Form(100)
+    min_size: int = Form(1000)  # Match legacy default
 ):
-    """Extract curves using legacy algorithm"""
+    """Extract curves using legacy algorithm - guaranteed compatibility"""
     try:
         start_time = datetime.now()
         image_data = await file.read()
@@ -696,6 +1398,123 @@ async def extract_curves_legacy(
     except Exception as e:
         logger.error(f"Legacy curve extraction failed: {e}")
         raise HTTPException(status_code=500, detail=f"Legacy curve extraction failed: {str(e)}")
+
+@app.post("/api/curve-extraction/extract-curves-optimized")
+async def extract_curves_optimized(
+    file: UploadFile = File(...),
+    selected_colors: str = Form(...),
+    x_min: float = Form(...),
+    x_max: float = Form(...),
+    y_min: float = Form(...),
+    y_max: float = Form(...),
+    x_scale: float = Form(...),
+    y_scale: float = Form(...),
+    x_scale_type: str = Form("linear"),
+    y_scale_type: str = Form("linear"),
+    min_size: int = Form(1000),
+    color_tolerance: int = Form(0),
+    use_plot_area: bool = Form(False),
+    x_axis_name: str = Form("X-Axis"),
+    y_axis_name: str = Form("Y-Axis")
+):
+    """Extract curves using optimized algorithm - best of legacy and enhanced"""
+    try:
+        start_time = datetime.now()
+        image_data = await file.read()
+        selected_colors_list = json.loads(selected_colors)
+        curves_map = {}
+
+        # Validate scale bounds for log scales
+        if x_scale_type == "log" and (x_min <= 0 or x_max <= 0):
+            raise HTTPException(status_code=400, detail="X-axis must be positive for log scale")
+        if y_scale_type == "log" and (y_min <= 0 or y_max <= 0):
+            raise HTTPException(status_code=400, detail="Y-axis must be positive for log scale")
+
+        # Strategy 1: Try legacy first (most reliable)
+        logger.info("Attempting legacy extraction")
+        legacy_data, _ = process_image_legacy(
+            image_data,
+            'custom',
+            'X', 'Y', 'Label',
+            x_min, x_max, y_min, y_max,
+            x_scale, y_scale,
+            {},
+            x_scale_type, y_scale_type, min_size
+        )
+        curves_map = legacy_data if legacy_data else {}
+        
+        if curves_map:
+            logger.info(f"Legacy extraction successful: {len(curves_map)} curves")
+        else:
+            logger.info("Legacy extraction failed, trying enhanced")
+            
+            # Strategy 2: Try enhanced with user settings
+            enhanced = process_image_enhanced(
+                image_data,
+                selected_colors_list,
+                x_min, x_max, y_min, y_max, x_scale, y_scale,
+                x_scale_type, y_scale_type,
+                min_size,
+                color_tolerance=color_tolerance,
+                use_plot_area=use_plot_area,
+                use_annotation_mask=False,
+                use_edge_guided=False,
+                use_adaptive_binning=False
+            )
+            curves_map = enhanced if enhanced else {}
+
+        # Convert to expected format
+        curves = []
+        total_points = 0
+        for color_name, data in curves_map.items():
+            xs = data.get('x', [])
+            ys = data.get('y', [])
+            if xs and ys and len(xs) == len(ys):
+                pts = [{ 'x': float(x), 'y': float(y), 'confidence': 0.95 } for x, y in zip(xs, ys)]
+                curves.append({
+                    'name': color_name,
+                    'color': data.get('color', display_colors.get(color_name, '#000000')),
+                    'points': pts,
+                    'representation': color_name,
+                    'pointCount': len(pts)
+                })
+                total_points += len(pts)
+
+        processing_time = (datetime.now() - start_time).total_seconds()
+
+        # Determine extraction method used
+        extraction_method = "legacy" if legacy_data else "enhanced"
+
+        plot_image = create_plot_image(curves, {
+            'x_axis_name': x_axis_name,
+            'y_axis_name': y_axis_name,
+            'x_min': x_min,
+            'x_max': x_max,
+            'y_min': y_min,
+            'y_max': y_max,
+            'x_scale_type': x_scale_type,
+            'y_scale_type': y_scale_type
+        })
+
+        return {
+            'success': True,
+            'data': {
+                'curves': curves,
+                'total_points': total_points,
+                'processing_time': processing_time,
+                'success': len(curves) > 0,
+                'plot_image': plot_image,
+                'metadata': {
+                    'extraction_method': extraction_method,
+                    'quality_score': len(curves) / len(selected_colors_list) if selected_colors_list else 0,
+                    'legacy_fallback_used': not legacy_data
+                }
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Optimized curve extraction failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Optimized curve extraction failed: {str(e)}")
 
 @app.post("/api/curve-extraction/extract-curves-llm")
 async def extract_curves_llm(

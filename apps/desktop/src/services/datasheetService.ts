@@ -1,26 +1,34 @@
 // import { invoke } from '@tauri-apps/api/tauri';
 
 // Temporary mock invoke function until Tauri is properly set up
-const invoke = async (command: string, args: any) => {
+const invoke = async <T>(command: string, args: any): Promise<T> => {
   console.log(`Mock invoke: ${command}`, args);
   // Return mock responses for now
   switch (command) {
     case 'upload_datasheet':
-      return { success: true, datasheetId: 'mock-id-' + Date.now() };
+      return { success: true, datasheetId: 'mock-id-' + Date.now() } as T;
     case 'get_datasheets_for_product':
-      return [];
+      return [] as T;
     case 'get_datasheet':
-      return null;
+      return {
+        id: 'mock-datasheet-id',
+        productId: args.productId || 'mock-product-id',
+        filename: 'mock-datasheet.pdf',
+        uploadDate: new Date().toISOString(),
+        status: 'completed',
+        graphicalData: [],
+        tableData: []
+      } as T;
     case 'delete_datasheet':
-      return true;
+      return true as T;
     case 'download_spice_model':
-      return 'mock-spice-model-data';
+      return 'mock-spice-model-data' as T;
     case 'get_datasheet_processing_status':
-      return { status: 'completed', progress: 100, message: 'Mock processing completed' };
+      return { status: 'completed', progress: 100, message: 'Mock processing completed' } as T;
     case 'retry_datasheet_processing':
-      return true;
+      return true as T;
     case 'download_web_datasheet':
-      return { success: true, localPath: 'downloads/datasheets/mock-datasheet.pdf' };
+      return { success: true, localPath: 'downloads/datasheets/mock-datasheet.pdf' } as T;
     default:
       throw new Error(`Unknown command: ${command}`);
   }

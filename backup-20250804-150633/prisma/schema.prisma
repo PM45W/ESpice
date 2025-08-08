@@ -1,0 +1,322 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Enhanced Product Management Models
+model Product {
+  id              String   @id @default(uuid())
+  name            String
+  manufacturer    String
+  partNumber      String   @unique
+  deviceType      String   // GaN-HEMT, SiC-MOSFET, Si-MOSFET, etc.
+  package         String?
+  description     String?
+  datasheets      Datasheet[]
+  spiceModels     SPICEModel[]
+  parameters      ProductParameter[]
+  extractionJobs  ExtractionJob[]
+  graphImages     GraphImage[]        // NEW: Graph images
+  graphExtractionJobs GraphExtractionJob[] // NEW: Graph extraction jobs
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ProductParameter {
+  id          String   @id @default(uuid())
+  productId   String
+  name        String
+  value       String
+  unit        String?
+  minValue    String?
+  maxValue    String?
+  typValue    String?
+  category    String   // Electrical, Thermal, Package, etc.
+  source      String   // Datasheet, Extraction, Manual
+  confidence  Float    @default(1.0)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SPICEModel {
+  id              String   @id @default(uuid())
+  productId       String
+  name            String
+  modelType       String   // empirical, physical, hybrid
+  modelFormat     String   // EPC, ASM, MVSG, BSIM, etc.
+  version         String   @default("1.0")
+  status          String   @default("draft") // draft, validated, published
+  sourceFile      String?  // Path to original .lib file
+  generatedFile   String?  // Path to generated .lib file
+  parameters      SPICEModelParameter[]
+  validationResults ValidationResult[]
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SPICEModelParameter {
+  id          String   @id @default(uuid())
+  modelId     String
+  name        String
+  value       String
+  unit        String?
+  description String?
+  category    String   // DC, AC, Temperature, etc.
+  source      String   // Extracted, Calculated, Manual
+  spiceModel  SPICEModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ValidationResult {
+  id          String   @id @default(uuid())
+  modelId     String
+  testType    String   // DC, AC, Transient, etc.
+  status      String   // pass, fail, warning
+  message     String?
+  data        Json?    // Test results and curves
+  spiceModel  SPICEModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model ExtractionTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  deviceType  String
+  modelFormat String
+  template    Json     // Template structure and mappings
+  isActive    Boolean  @default(true)
+  extractionJobs ExtractionJob[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ExtractionJob {
+  id          String   @id @default(uuid())
+  productId   String
+  templateId  String?
+  status      String   @default("pending") // pending, running, completed, failed
+  progress    Int      @default(0)
+  result      Json?
+  error       String?
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  template    ExtractionTemplate? @relation(fields: [templateId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Graph Extraction Queue System Models
+model GraphImage {
+  id          String   @id @default(uuid())
+  productId   String
+  filename    String
+  filePath    String   // Local file system path
+  uploadDate  DateTime @default(now())
+  description String?
+  status      String   @default("pending") // pending, processing, completed, failed
+  fileSize    Int?     // File size in bytes
+  mimeType    String?  // image/png, image/jpeg, etc.
+  dimensions  Json?    // {width: number, height: number}
+  extractionJobs GraphExtractionJob[]
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([productId])
+  @@index([status])
+}
+
+model GraphExtractionJob {
+  id          String   @id @default(uuid())
+  productId   String
+  imageId     String
+  queueId     String?
+  status      String   @default("pending") // pending, queued, processing, completed, failed
+  priority    String   @default("normal") // low, normal, high, urgent
+  progress    Int      @default(0) // 0-100 percentage
+  result      Json?    // Temporary result data
+  error       String?  // Error message if failed
+  extractionMethod String @default("standard") // standard, legacy, llm
+  parameters  Json?    // Extraction parameters (thresholds, filters, etc.)
+  startedAt   DateTime?
+  completedAt DateTime?
+  estimatedDuration Int? // Estimated processing time in seconds
+  actualDuration Int?   // Actual processing time in seconds
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  image       GraphImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  queue       GraphExtractionQueue? @relation(fields: [queueId], references: [id])
+  extractionResult GraphExtractionResult?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([productId])
+  @@index([status])
+  @@index([priority])
+  @@index([queueId])
+}
+
+model GraphExtractionResult {
+  id          String   @id @default(uuid())
+  jobId       String   @unique
+  csvFilePath String   // Path to generated CSV file
+  csvData     Json?    // Structured CSV data for quick access
+  metadata    Json?    // Extraction metadata (confidence, method, etc.)
+  confidence  Float    @default(1.0) // 0.0-1.0 confidence score
+  dataPoints  Int?     // Number of extracted data points
+  processingTime Float? // Processing time in seconds
+  extractionMethod String // Method used (standard, legacy, llm)
+  parameters  Json?    // Parameters used for extraction
+  job         GraphExtractionJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model GraphExtractionQueue {
+  id          String   @id @default(uuid())
+  name        String   // Queue name (e.g., "default", "high-priority")
+  mode        String   @default("automatic") // automatic, manual
+  status      String   @default("active") // active, paused, stopped
+  maxConcurrentJobs Int @default(3) // Maximum concurrent processing
+  priority    String   @default("fifo") // fifo, priority, custom
+  description String?
+  settings    Json?    // Queue-specific settings
+  jobs        GraphExtractionJob[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Legacy models (keeping for backward compatibility)
+model PDFDocument {
+  id           String          @id @default(uuid())
+  filename     String
+  uploadDate   DateTime        @default(now())
+  status       String
+  pageCount    Int
+  extractionRuns ExtractionRun[]
+  pages        Page[]
+}
+
+model ExtractionRun {
+  id           String      @id @default(uuid())
+  pdfId        String
+  startedAt    DateTime
+  finishedAt   DateTime?
+  status       String
+  error        String?
+  pdf          PDFDocument @relation(fields: [pdfId], references: [id])
+  errorLogs    ErrorLog[]
+}
+
+model Page {
+  id           String      @id @default(uuid())
+  pdfId        String
+  pageNumber   Int
+  textBlocks   TextBlock[]
+  tables       Table[]
+  images       Image[]
+  parameters   Parameter[]
+  pdf          PDFDocument @relation(fields: [pdfId], references: [id])
+}
+
+model TextBlock {
+  id           String   @id @default(uuid())
+  pageId       String
+  bounds       Json
+  text         String
+  confidence   Float
+  page         Page @relation(fields: [pageId], references: [id])
+}
+
+model Table {
+  id           String   @id @default(uuid())
+  pageId       String
+  bounds       Json
+  headers      Json
+  rows         Json
+  confidence   Float
+  parameters   Parameter[]
+  page         Page @relation(fields: [pageId], references: [id])
+}
+
+model Parameter {
+  id           String   @id @default(uuid())
+  tableId      String?
+  pageId       String
+  name         String
+  value        String
+  unit         String
+  confidence   Float
+  table        Table? @relation(fields: [tableId], references: [id])
+  page         Page @relation(fields: [pageId], references: [id])
+}
+
+model Image {
+  id           String   @id @default(uuid())
+  pageId       String
+  bounds       Json
+  type         String
+  data         Bytes
+  graph        Graph?
+  page         Page @relation(fields: [pageId], references: [id])
+}
+
+model Graph {
+  id           String   @id @default(uuid())
+  imageId      String   @unique
+  extractedData Json
+  status       String
+  image        Image @relation(fields: [imageId], references: [id])
+}
+
+model ErrorLog {
+  id           String   @id @default(uuid())
+  extractionRunId String
+  message      String
+  severity     String
+  extractionRun ExtractionRun @relation(fields: [extractionRunId], references: [id])
+}
+
+model WebProduct {
+  id        String   @id @default(uuid())
+  name      String
+  specs     Json
+  sourceUrl String
+  dateAdded DateTime @default(now())
+  datasheets Datasheet[]
+}
+
+model Datasheet {
+  id           String   @id @default(uuid())
+  productId    String
+  filename     String
+  uploadDate   DateTime @default(now())
+  status       String
+  spiceModelPath String?
+  product      WebProduct @relation(fields: [productId], references: [id])
+  enhancedProduct Product? @relation(fields: [enhancedProductId], references: [id])
+  enhancedProductId String?
+  graphicalData GraphicalData[]
+  tableData    TableData[]
+}
+
+model GraphicalData {
+  id           String   @id @default(uuid())
+  datasheetId  String
+  type         String
+  data         Json
+  datasheet    Datasheet @relation(fields: [datasheetId], references: [id])
+}
+
+model TableData {
+  id           String   @id @default(uuid())
+  datasheetId  String
+  name         String
+  data         Json
+  datasheet    Datasheet @relation(fields: [datasheetId], references: [id])
+} 

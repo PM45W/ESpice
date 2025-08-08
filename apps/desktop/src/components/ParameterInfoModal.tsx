@@ -1,7 +1,7 @@
-import React from 'react';
-import { X, Info, FileText, BarChart3, Download, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { X, Info, FileText, BarChart3, Download, AlertCircle, CheckCircle, Trash2, Upload } from 'lucide-react';
 import { ASMHEMTParameter, MEASUREMENT_DATA_TYPES } from '../services/asmHemtParameters';
-import { getMeasurementDataByType, measurementDataToCSV } from '../data/mockMeasurementData';
+import productManagementService, { CharacteristicData } from '../services/productManagementService';
 
 interface ParameterInfoModalProps {
   parameter: ASMHEMTParameter | null;
@@ -18,22 +18,100 @@ const ParameterInfoModal: React.FC<ParameterInfoModalProps> = ({
 }) => {
   if (!isOpen || !parameter) return null;
 
+  // Local state for existing product characteristics mapped by measurement key
+  const [characteristics, setCharacteristics] = useState<CharacteristicData[]>([]);
+  const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
+  const [errorMap, setErrorMap] = useState<Record<string, string | undefined>>({});
+
+  const refreshCharacteristics = useCallback(async () => {
+    if (!productId) return;
+    try {
+      const list = await productManagementService.getCharacteristicData(productId);
+      setCharacteristics(list || []);
+    } catch (e) {
+      // ignore
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    void refreshCharacteristics();
+  }, [refreshCharacteristics]);
+
+  const typeToCharacteristic = useCallback(
+    (dataType: keyof typeof MEASUREMENT_DATA_TYPES) =>
+      characteristics.find(c => c.type === dataType),
+    [characteristics]
+  );
+
   const getMeasurementDataStatus = (dataType: keyof typeof MEASUREMENT_DATA_TYPES) => {
     if (!parameter.measurementData[dataType]) {
       return { available: false, status: 'Not Required' };
     }
-    
-    // Mock check - in real implementation, this would check the database
-    const availableDataTypes = ['outputCharacteristics', 'transferCharacteristics', 'cvCharacteristics'];
-    const dataTypeKey = Object.keys(MEASUREMENT_DATA_TYPES).find(key => 
-      MEASUREMENT_DATA_TYPES[key as keyof typeof MEASUREMENT_DATA_TYPES] === MEASUREMENT_DATA_TYPES[dataType]
-    );
-    
-    const available = availableDataTypes.includes(dataTypeKey || '');
-    return {
-      available,
-      status: available ? 'Available' : 'Missing'
-    };
+    const existing = typeToCharacteristic(dataType);
+    const available = !!(existing && existing.csvData && existing.csvData.length > 0);
+    return { available, status: available ? 'Available' : 'Missing' };
+  };
+
+  const parseCSV = (text: string): any[] => {
+    const lines = text.trim().split(/\r?\n/).filter(Boolean);
+    if (lines.length === 0) return [];
+    const headers = lines[0].split(',').map(h => h.trim());
+    const rows: any[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',');
+      const row: Record<string, string> = {};
+      headers.forEach((h, idx) => {
+        row[h] = (values[idx] ?? '').trim();
+      });
+      rows.push(row);
+    }
+    return rows;
+  };
+
+  const handleUploadCsv = async (file: File, dataType: keyof typeof MEASUREMENT_DATA_TYPES) => {
+    if (!productId) return;
+    try {
+      setLoadingMap(prev => ({ ...prev, [dataType]: true }));
+      setErrorMap(prev => ({ ...prev, [dataType]: undefined }));
+      const text = await file.text();
+      const rows = parseCSV(text);
+      await productManagementService.saveExtractedCSV({
+        productId,
+        graphType: dataType, // store by measurement key to align with ASM requirements
+        csvData: rows,
+        name: MEASUREMENT_DATA_TYPES[dataType],
+        description: `Uploaded CSV for ${parameter.name} (${MEASUREMENT_DATA_TYPES[dataType]})`
+      });
+      await refreshCharacteristics();
+      // Notify other views to refresh product data/state
+      try {
+        window.dispatchEvent(new CustomEvent('espice:product-characteristics-updated', { detail: { productId } }));
+      } catch {}
+    } catch (e: any) {
+      setErrorMap(prev => ({ ...prev, [dataType]: e?.message || 'Upload failed' }));
+    } finally {
+      setLoadingMap(prev => ({ ...prev, [dataType]: false }));
+    }
+  };
+
+  const handleDeleteCsv = async (dataType: keyof typeof MEASUREMENT_DATA_TYPES) => {
+    if (!productId) return;
+    const existing = typeToCharacteristic(dataType);
+    if (!existing) return;
+    try {
+      setLoadingMap(prev => ({ ...prev, [dataType]: true }));
+      setErrorMap(prev => ({ ...prev, [dataType]: undefined }));
+      await productManagementService.deleteCharacteristicData(productId, existing.id);
+      await refreshCharacteristics();
+      // Notify other views to refresh product data/state
+      try {
+        window.dispatchEvent(new CustomEvent('espice:product-characteristics-updated', { detail: { productId } }));
+      } catch {}
+    } catch (e: any) {
+      setErrorMap(prev => ({ ...prev, [dataType]: e?.message || 'Delete failed' }));
+    } finally {
+      setLoadingMap(prev => ({ ...prev, [dataType]: false }));
+    }
   };
 
   const handleDownloadCSV = (dataType: string) => {
@@ -174,7 +252,7 @@ const ParameterInfoModal: React.FC<ParameterInfoModalProps> = ({
             </div>
           </div>
 
-          {/* Measurement Data Requirements */}
+          {/* Measurement Data Requirements & CSV Management */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Measurement Data Requirements</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -206,14 +284,58 @@ const ParameterInfoModal: React.FC<ParameterInfoModalProps> = ({
                         </span>
                       </div>
                     </div>
-                    {status.available && (
-                      <button
-                        onClick={() => handleDownloadCSV(key)}
-                        className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
-                      >
-                        <Download className="w-3 h-3" />
-                        <span>Download CSV</span>
-                      </button>
+                    <div className="mt-2 flex items-center gap-2">
+                      <label className="inline-flex items-center px-2 py-1 text-xs rounded bg-blue-50 text-blue-700 cursor-pointer hover:bg-blue-100">
+                        <Upload className="w-3 h-3 mr-1" /> Upload CSV
+                        <input
+                          type="file"
+                          accept=".csv"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUploadCsv(file, key as keyof typeof MEASUREMENT_DATA_TYPES);
+                            // reset input to allow same file re-upload
+                            e.currentTarget.value = '';
+                          }}
+                          disabled={loadingMap[key]}
+                        />
+                      </label>
+                      {status.available && (
+                        <button
+                          onClick={() => handleDeleteCsv(key as keyof typeof MEASUREMENT_DATA_TYPES)}
+                          disabled={!!loadingMap[key]}
+                          className="inline-flex items-center px-2 py-1 text-xs rounded bg-red-50 text-red-700 hover:bg-red-100"
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" /> Delete
+                        </button>
+                      )}
+                      {status.available && (
+                        <button
+                          onClick={async () => {
+                            // Simple CSV export of stored data
+                            const existing = typeToCharacteristic(key as keyof typeof MEASUREMENT_DATA_TYPES);
+                            if (!existing?.csvData) return;
+                            const rows = existing.csvData as any[];
+                            const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+                            const csv = [headers.join(','), ...rows.map(r => headers.map(h => `${r[h] ?? ''}`).join(','))].join('\n');
+                            const blob = new Blob([csv], { type: 'text/csv' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${key}_${parameter.name}.csv`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="inline-flex items-center px-2 py-1 text-xs rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        >
+                          <Download className="w-3 h-3 mr-1" /> Download
+                        </button>
+                      )}
+                    </div>
+                    {errorMap[key] && (
+                      <div className="mt-2 text-xs text-red-600">{errorMap[key]}</div>
                     )}
                   </div>
                 );

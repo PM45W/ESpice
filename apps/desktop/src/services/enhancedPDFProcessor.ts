@@ -348,7 +348,7 @@ export class EnhancedPDFProcessor {
           rows: candidate.rows,
           pageNumber: page.pageNum,
           confidence: candidate.confidence,
-          extractionMethod: 'layout',
+          extractionMethod: 'structure',
           validationStatus: 'valid'
         });
       });
@@ -1201,16 +1201,20 @@ export class EnhancedPDFProcessor {
     
     if (error instanceof Error) {
       return {
-        code: PDFErrorCode.PROCESSING_ERROR,
-        message: error.message,
-        details: error.stack
+        code: PDFErrorCode.PARSING_ERROR,
+        message: error instanceof Error ? error.message : 'Unknown processing error',
+        details: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date(),
+        recoverable: false
       };
     }
     
     return {
       code: PDFErrorCode.UNKNOWN_ERROR,
-      message: 'Unknown error occurred during PDF processing',
-      details: String(error)
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      details: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date(),
+      recoverable: false
     };
   }
 

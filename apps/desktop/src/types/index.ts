@@ -20,6 +20,36 @@ export interface Product {
   updatedAt: Date;
 }
 
+export interface ProductWithParameters extends Product {
+  parameters: Parameter[];
+  characteristics: CharacteristicData[];
+}
+
+export interface CharacteristicData {
+  id: string;
+  name: string;
+  value: string;
+  unit: string;
+  category: string;
+  source: string;
+  confidence: number;
+  createdAt: Date;
+}
+
+export interface LLMAnalysisResult {
+  id: string;
+  productId: string;
+  analysis: {
+    summary: string;
+    keyParameters: string[];
+    confidence: number;
+    recommendations: string[];
+  };
+  timestamp: Date;
+  model: string;
+  provider: string;
+}
+
 export interface Parameter {
   id: string;
   productId: string;
@@ -70,14 +100,19 @@ export interface GraphConfig {
   x_scale_type: 'linear' | 'log';
   y_scale_type: 'linear' | 'log';
   min_size?: number;
-  detection_sensitivity?: number;
   color_tolerance?: number;
-  smoothing_factor?: number;
   graph_type: string;
   x_axis_name?: string;
   y_axis_name?: string;
   third_col?: string;
   output_filename?: string;
+  // Advanced flags (backend feature toggles)
+  mode?: 'legacy' | 'enhanced' | 'auto' | 'optimized';
+  use_plot_area?: boolean;
+  use_annotation_mask?: boolean;
+  use_edge_guided?: boolean;
+  use_adaptive_binning?: boolean;
+  use_auto_color?: boolean;
 }
 
 export interface GraphPreset {
@@ -348,7 +383,7 @@ export interface AppConfig {
 
 // Event types for real-time updates
 export interface ProcessingEvent {
-  type: 'job_started' | 'job_progress' | 'job_completed' | 'job_failed' | 'batch_completed';
+  type: 'job_started' | 'job_progress' | 'job_completed' | 'job_failed' | 'batch_completed' | 'processing_paused' | 'processing_resumed';
   jobId?: string;
   data?: any;
   timestamp: Date;

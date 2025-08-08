@@ -1,8 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Card, CardHeader, CardContent, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Alert, AlertDescription } from './ui/alert';
+import { Card, CardHeader, CardContent, CardTitle, Button, Badge, Alert, AlertDescription } from '@espice/ui';
 import { 
   Upload, 
   FileText, 

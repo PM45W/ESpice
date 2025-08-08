@@ -7,8 +7,7 @@ import type {
   CurveData,
   GraphType,
   BatchJob,
-  ProcessingStats,
-  ColorDetectionResult
+  ProcessingStats
 } from '../types';
 
 // Enhanced types for LLM integration
@@ -326,7 +325,7 @@ Respond with a valid JSON object containing:
       
       for (const color of baseColors) {
         // Apply enhanced filtering based on color characteristics
-        const enhancedColor = await this.enhanceColorDetection(color, imageData, config);
+        const enhancedColor = await this.enhanceColorDetection(color, imageData);
         if (enhancedColor) {
           enhancedColors.push(enhancedColor);
         }
@@ -334,7 +333,7 @@ Respond with a valid JSON object containing:
 
       // If no colors detected, try alternative methods
       if (enhancedColors.length === 0) {
-        return await this.fallbackColorDetection(imageData, config);
+        return await this.fallbackColorDetection(imageData);
       }
 
       return enhancedColors;
@@ -362,12 +361,12 @@ Respond with a valid JSON object containing:
 
           // Apply noise reduction
           if (config.noiseReduction) {
-            processedCurve = await this.reduceNoise(processedCurve, config);
+            processedCurve = await this.reduceNoise(processedCurve);
           }
 
           // Apply outlier removal
           if (config.outlierRemoval) {
-            processedCurve = await this.removeOutliers(processedCurve, config);
+            processedCurve = await this.removeOutliers(processedCurve);
           }
 
           // Apply smoothing
@@ -404,7 +403,7 @@ Respond with a valid JSON object containing:
         result.curves.map(async (curve) => {
           // Validate curve quality
           const quality = this.calculateCurveQuality(curve);
-          const confidence = this.calculateCurveConfidence(curve, config);
+          const confidence = this.calculateCurveConfidence(curve);
 
           return {
             ...curve,
@@ -454,7 +453,7 @@ Respond with a valid JSON object containing:
     }
   }
 
-  private async enhanceColorDetection(color: DetectedColor, imageData: Uint8Array, config: EnhancedGraphConfig): Promise<DetectedColor | null> {
+  private async enhanceColorDetection(color: DetectedColor, imageData: Uint8Array): Promise<DetectedColor | null> {
     // Enhanced color filtering logic
     const enhancedColor = { ...color };
     
@@ -469,19 +468,19 @@ Respond with a valid JSON object containing:
     return enhancedColor;
   }
 
-  private async fallbackColorDetection(imageData: Uint8Array, config: EnhancedGraphConfig): Promise<DetectedColor[]> {
+  private async fallbackColorDetection(imageData: Uint8Array): Promise<DetectedColor[]> {
     // Implement fallback color detection methods
     // This could include different HSV ranges, edge detection, etc.
     return await this.curveExtractionService.detectColors(imageData);
   }
 
-  private async reduceNoise(curve: CurveData, config: EnhancedGraphConfig): Promise<CurveData> {
+  private async reduceNoise(curve: CurveData): Promise<CurveData> {
     // Implement noise reduction using moving average or median filtering
     const smoothedPoints = this.applyMovingAverage(curve.points, 3);
     return { ...curve, points: smoothedPoints };
   }
 
-  private async removeOutliers(curve: CurveData, config: EnhancedGraphConfig): Promise<CurveData> {
+  private async removeOutliers(curve: CurveData): Promise<CurveData> {
     // Implement outlier removal using statistical methods
     const filteredPoints = this.removeStatisticalOutliers(curve.points);
     return { ...curve, points: filteredPoints };
@@ -511,32 +510,32 @@ Respond with a valid JSON object containing:
   }
 
   // Utility methods for curve processing
-  private applyMovingAverage(points: Array<[number, number]>, window: number): Array<[number, number]> {
-    const smoothed: Array<[number, number]> = [];
+  private applyMovingAverage(points: CurvePoint[], window: number): CurvePoint[] {
+    const smoothed: CurvePoint[] = [];
     
     for (let i = 0; i < points.length; i++) {
       const start = Math.max(0, i - Math.floor(window / 2));
       const end = Math.min(points.length, i + Math.floor(window / 2) + 1);
       
       const windowPoints = points.slice(start, end);
-      const avgX = windowPoints.reduce((sum, p) => sum + p[0], 0) / windowPoints.length;
-      const avgY = windowPoints.reduce((sum, p) => sum + p[1], 0) / windowPoints.length;
+      const avgX = windowPoints.reduce((sum, p) => sum + p.x, 0) / windowPoints.length;
+      const avgY = windowPoints.reduce((sum, p) => sum + p.y, 0) / windowPoints.length;
       
-      smoothed.push([avgX, avgY]);
+      smoothed.push({ x: avgX, y: avgY });
     }
     
     return smoothed;
   }
 
-  private removeStatisticalOutliers(points: Array<[number, number]>): Array<[number, number]> {
+  private removeStatisticalOutliers(points: CurvePoint[]): CurvePoint[] {
     if (points.length < 3) return points;
     
-    const yValues = points.map(p => p[1]);
+    const yValues = points.map(p => p.y);
     const median = this.median(yValues);
     const mad = this.medianAbsoluteDeviation(yValues);
     const threshold = 2.5 * mad;
     
-    return points.filter(p => Math.abs(p[1] - median) <= threshold);
+    return points.filter(p => Math.abs(p.y - median) <= threshold);
   }
 
   private getSmoothingWindow(level: string): number {
@@ -578,8 +577,8 @@ Respond with a valid JSON object containing:
     if (curve.points.length < 3) return true;
     
     // Simple linearity check using R-squared
-    const xValues = curve.points.map(p => p[0]);
-    const yValues = curve.points.map(p => p[1]);
+    const xValues = curve.points.map(p => p.x);
+    const yValues = curve.points.map(p => p.y);
     
     // Calculate correlation coefficient
     const correlation = this.calculateCorrelation(xValues, yValues);
@@ -614,7 +613,7 @@ Respond with a valid JSON object containing:
     return 0.8; // Placeholder
   }
 
-  private calculateCurveConfidence(curve: CurveData, config: EnhancedGraphConfig): number {
+  private calculateCurveConfidence(curve: CurveData): number {
     // Implement curve confidence calculation
     // This could be based on quality, fitting error, etc.
     return 0.7; // Placeholder
@@ -653,10 +652,10 @@ Respond with a valid JSON object containing:
   exportToCSV(curves: CurveData[], colorRepresentations: Record<string, string>): string {
     let csv = 'Color,X,Y\n';
     
-    curves.forEach((curve, index) => {
+    curves.forEach((curve) => {
       const colorName = colorRepresentations[curve.color] || curve.color;
       curve.points.forEach(point => {
-        csv += `${colorName},${point[0]},${point[1]}\n`;
+        csv += `${colorName},${point.x},${point.y}\n`;
       });
     });
     

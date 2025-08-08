@@ -1,0 +1,343 @@
+/* MCP Model Generation Modal Styles */
+
+.mcp-model-generation-modal {
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.mcp-model-generation-modal .modal-body {
+  padding: 2rem;
+}
+
+/* Upload Section */
+.upload-section {
+  text-align: center;
+}
+
+.upload-header {
+  margin-bottom: 2rem;
+}
+
+.upload-icon {
+  color: var(--color-primary);
+  margin-bottom: 1rem;
+}
+
+.upload-header h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-text-primary);
+}
+
+.upload-header p {
+  color: var(--color-text-secondary);
+  margin-bottom: 2rem;
+}
+
+/* Model Type Selection */
+.model-type-selection {
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.model-type-selection label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.model-type-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.model-type-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 179, 136, 0.2);
+}
+
+/* Device Info */
+.device-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.info-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.info-group input,
+.info-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.info-group input:focus,
+.info-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 179, 136, 0.2);
+}
+
+/* File Upload Area */
+.file-upload-area {
+  margin-bottom: 2rem;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-upload-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  border: 2px dashed var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-background-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-upload-label:hover {
+  border-color: var(--color-primary);
+  background: rgba(0, 179, 136, 0.05);
+}
+
+.file-upload-label span {
+  color: var(--color-text-secondary);
+}
+
+/* Processing Section */
+.processing-section {
+  text-align: center;
+}
+
+.processing-section h3 {
+  margin-bottom: 2rem;
+  color: var(--color-text-primary);
+}
+
+.processing-info {
+  margin-top: 2rem;
+}
+
+.processing-info .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--color-border);
+  border-top: 4px solid var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Preview Section */
+.preview-section {
+  text-align: left;
+}
+
+.preview-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.success-icon {
+  color: var(--color-success);
+  margin-bottom: 1rem;
+}
+
+.model-summary {
+  margin-bottom: 2rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.summary-item label {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.summary-item span {
+  color: var(--color-text-secondary);
+}
+
+/* Parameters Preview */
+.parameters-preview {
+  margin-bottom: 2rem;
+}
+
+.parameters-preview h4 {
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+}
+
+.parameters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.parameter-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background: var(--color-background-secondary);
+  border-radius: 0.25rem;
+}
+
+.param-name {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.param-value {
+  color: var(--color-text-secondary);
+}
+
+/* Model Code */
+.model-code {
+  margin-bottom: 2rem;
+}
+
+.model-code h4 {
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+}
+
+.code-preview {
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.code-preview pre {
+  margin: 0;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.code-preview code {
+  color: var(--color-text-primary);
+}
+
+/* Export Options */
+.export-options h4 {
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+}
+
+.export-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Error Message */
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 0.5rem;
+  color: var(--color-error);
+  margin-bottom: 1rem;
+}
+
+/* Supported Formats */
+.supported-formats {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--color-background-secondary);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .mcp-model-generation-modal {
+    margin: 1rem;
+    max-height: 95vh;
+  }
+
+  .mcp-model-generation-modal .modal-body {
+    padding: 1rem;
+  }
+
+  .device-info {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .parameters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .export-buttons {
+    flex-direction: column;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .file-upload-label {
+    background: var(--color-background-tertiary);
+  }
+
+  .parameter-item {
+    background: var(--color-background-tertiary);
+  }
+
+  .code-preview {
+    background: var(--color-background-tertiary);
+  }
+
+  .supported-formats {
+    background: var(--color-background-tertiary);
+  }
+}

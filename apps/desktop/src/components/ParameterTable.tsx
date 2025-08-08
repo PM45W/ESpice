@@ -1,13 +1,31 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Filter, Download, Edit3, Trash2, Plus, Save, X } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
-import { Badge } from './ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Label } from './ui/label';
+import { 
+  Button, 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  Input, 
+  Badge, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow, 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue, 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger, 
+  Label 
+} from '@espice/ui';
 
 export interface Parameter {
   id: string;

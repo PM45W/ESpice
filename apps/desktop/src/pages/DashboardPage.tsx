@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react'
 import { Upload, FileText, Settings, CheckCircle, AlertCircle, Clock, TrendingUp, Activity, Users, Zap, Cpu, Database, BarChart3, Gauge, HardDrive, Network, Server, Play, Pause, RefreshCw, Target, Shield, Globe, Download, BarChart } from 'lucide-react'
-import { SimpleToggle } from '../components/ui/simple-toggle'
+import { Switch } from '@espice/ui'
 import type { LucideIcon } from 'lucide-react'
 import { useSystemMonitor } from '../hooks/useSystemMonitor'
 import '../styles/dashboard.css'
@@ -13,6 +13,9 @@ const CompactServiceToggle = React.memo<{
   toggleService?: () => void
   isRunning?: boolean
 }>(({ service, status, responseTime, toggleService, isRunning }) => {
+  // Generate a service-specific ID for consistent styling
+  const serviceId = `service-${service.toLowerCase().replace(/\s+/g, '-')}`
+  
   return (
     <div className="service-toggle-card">
       <div className="service-info">
@@ -23,7 +26,8 @@ const CompactServiceToggle = React.memo<{
         </div>
       </div>
       {toggleService && (
-        <SimpleToggle
+        <Switch
+          id={serviceId}
           checked={isRunning}
           onCheckedChange={toggleService}
         />

@@ -1,7 +1,7 @@
 /* Graph Extraction Page Styles */
 .graph-extraction-page {
-  padding: 20px;
-  max-width: 1400px;
+  padding: 12px;
+  max-width: 1200px;
   margin: 0 auto;
   background: hsl(var(--background));
   min-height: 100vh;
@@ -13,15 +13,15 @@
 .extraction-layout {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 10px;
   width: 100%;
   max-width: 100%;
 }
 
 .main-row {
   display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 20px;
+  grid-template-columns: 1fr 380px;
+  gap: 10px;
   align-items: start;
   width: 100%;
   max-width: 100%;
@@ -31,7 +31,7 @@
 .upload-panel {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 10px;
   width: 100%;
   max-width: 100%;
 }
@@ -39,25 +39,25 @@
 .upload-section {
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: none;
   width: 100%;
   max-width: 100%;
   overflow: hidden; /* Ensure content stays within bounds */
 }
 
 .upload-area {
-  border: 2px dashed hsl(var(--border));
-  border-radius: 8px;
-  padding: 40px;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 6px;
+  padding: 16px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
   background: hsl(var(--muted) / 0.1);
   position: relative;
   overflow: hidden;
-  height: 300px;
+  height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,24 +148,24 @@
 }
 
 .generated-graph-section {
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 20px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 8px 0 0 0;
+  margin-top: 8px;
   width: 100%;
   max-width: 100%;
   overflow: hidden; /* Ensure content stays within bounds */
 }
 
 .generated-graph-container {
-  min-height: 520px; /* Increased for 1:1 aspect ratio */
+  min-height: 471px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: hsl(var(--muted) / 0.1);
-  border-radius: 8px;
-  border: 1px dashed hsl(var(--border));
+  background: hsl(var(--muted) / 0.06);
+  border-radius: 6px;
+  border: 1px solid hsl(var(--border));
   width: 100%;
   max-width: 100%;
   overflow: hidden; /* Ensure graph stays within bounds */
@@ -187,19 +187,19 @@
 .config-panel {
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: none;
   width: 100%;
   max-width: 100%;
   overflow: hidden; /* Ensure content stays within bounds */
 }
 
 .config-section {
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  border-radius: 8px;
-  padding: 20px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
   width: 100%;
   max-width: 100%;
 }
@@ -207,7 +207,7 @@
 .config-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 10px;
   width: 100%;
   max-width: 100%;
 }
@@ -224,7 +224,7 @@
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 8px;
   width: 100%;
   max-width: 100%;
 }
@@ -234,6 +234,62 @@
   font-weight: 500;
   color: hsl(var(--foreground));
   margin-bottom: 4px;
+}
+
+/* Enhanced options layout */
+.enhanced-options {
+  padding: 10px;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(var(--muted) / 0.08);
+}
+.enhanced-options .enhanced-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.enhanced-options .enhanced-hint {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+.flag-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (min-width: 640px) {
+  .flag-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .flag-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.flag-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(var(--card));
+}
+.flag-item input[type="checkbox"] {
+  margin-top: 2px;
+}
+.flag-text {
+  display: flex;
+  flex-direction: column;
+}
+.flag-title {
+  font-weight: 600;
+}
+.flag-help {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
 }
 
 .form-input,
@@ -380,7 +436,7 @@
 }
 
 .color-checkbox {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
@@ -390,15 +446,14 @@
   font-size: 0.875rem;
   transition: all 0.2s ease;
   white-space: nowrap;
+  background: hsl(var(--card));
 }
 
 .color-checkbox:hover {
   background: hsl(var(--accent));
 }
 
-.color-checkbox input[type="checkbox"] {
-  margin: 0;
-}
+/* checkbox removed; using button toggle */
 
 .color-swatch {
   width: 16px;
@@ -440,11 +495,11 @@
 
 /* Full Graph Section */
 .full-graph-section {
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  border-radius: 12px;
-  padding: 24px;
-  margin-top: 20px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin-top: 8px;
   width: 100%;
   max-width: 100%;
   overflow: hidden; /* Ensure content stays within bounds */
@@ -454,8 +509,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  gap: 16px;
+  margin-bottom: 8px;
+  gap: 8px;
 }
 
 .full-graph-header h3 {
@@ -1096,4 +1151,20 @@
   .job-table td:nth-child(5) {
     display: none;
   }
+}
+
+/* Custom Graph Type Styles */
+.graph-type-container {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.graph-type-container .form-select {
+  flex: 1;
+}
+
+.custom-graph-type-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
 }

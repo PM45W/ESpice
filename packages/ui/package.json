@@ -1,0 +1,64 @@
+{
+  "name": "@espice/ui",
+  "version": "1.0.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Shared UI components for ESpice applications",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "lint": "eslint src --ext .ts,.tsx",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "dependencies": {
+    "@radix-ui/react-alert-dialog": "^1.0.5",
+    "@radix-ui/react-avatar": "^1.0.4",
+    "@radix-ui/react-checkbox": "^1.0.4",
+    "@radix-ui/react-dialog": "^1.0.5",
+    "@radix-ui/react-dropdown-menu": "^2.0.6",
+    "@radix-ui/react-label": "^2.0.2",
+    "@radix-ui/react-popover": "^1.0.7",
+    "@radix-ui/react-progress": "^1.0.3",
+    "@radix-ui/react-scroll-area": "^1.0.5",
+    "@radix-ui/react-select": "^2.0.0",
+    "@radix-ui/react-separator": "^1.0.3",
+    "@radix-ui/react-switch": "^1.0.3",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "@radix-ui/react-toast": "^1.1.5",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "jest-environment-jsdom": "^30.0.5",
+    "lucide-react": "^0.294.0",
+    "tailwind-merge": "^2.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^14.0.0",
+    "@types/jest": "^29.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "react",
+    "ui",
+    "components",
+    "espice",
+    "semiconductor"
+  ],
+  "author": "ESpice Team",
+  "license": "MIT"
+}

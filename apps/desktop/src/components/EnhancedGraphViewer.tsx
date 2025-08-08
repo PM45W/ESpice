@@ -25,164 +25,212 @@ const EnhancedGraphViewer: React.FC<EnhancedGraphViewerProps> = ({
   showAxisLabels = true,
   showTitle = true,
 }) => {
-  // Debug logging for component props
-  console.log('=== EnhancedGraphViewer Debug ===');
-  console.log('Curves received:', curves);
-  console.log('Config received:', config);
-  console.log('Width:', width, 'Height:', height);
-  console.log('Curves count:', curves?.length || 0);
-  
-  if (curves && curves.length > 0) {
-    curves.forEach((curve, index) => {
-      console.log(`Curve ${index}:`, {
-        name: curve.name,
-        color: curve.color,
-        pointsCount: curve.points.length,
-        firstPoint: curve.points[0],
-        lastPoint: curve.points[curve.points.length - 1]
-      });
-    });
-  }
+  const margin = 80;
 
-  const margin = 80; // Define margin at component level
+  // Calculate proper axis bounds based on data and config
   const graphData = useMemo(() => {
     if (!curves || curves.length === 0) return null;
 
-    // Use the original config bounds (like legacy code does)
-    const minX = config.x_min * config.x_scale;
-    const maxX = config.x_max * config.x_scale;
-    const minY = 0; // Always start Y-axis at 0
-    const maxY = config.y_max * config.y_scale;
+    // Collect all data points to determine actual bounds
+    let allXValues: number[] = [];
+    let allYValues: number[] = [];
 
-    // Add small padding for better visualization
-    const xPadding = (maxX - minX) * 0.02;
-    const yPadding = maxY * 0.02;
-    
-    const finalMinX = Math.max(0, minX - xPadding);
-    const finalMaxX = maxX + xPadding;
-    const finalMinY = 0; // Always 0
-    const finalMaxY = maxY + yPadding;
+    curves.forEach(curve => {
+      curve.points.forEach(point => {
+        allXValues.push(point.x);
+        allYValues.push(point.y);
+      });
+    });
 
-    // Debug logging
-    console.log('=== Graph Bounds Debug ===');
-    console.log('Config bounds:', { x_min: config.x_min, x_max: config.x_max, y_min: config.y_min, y_max: config.y_max });
-    console.log('Scale factors:', { x_scale: config.x_scale, y_scale: config.y_scale });
-    console.log('Scaled bounds:', { minX, maxX, minY, maxY });
-    console.log('Final bounds:', { finalMinX, finalMaxX, finalMinY, finalMaxY });
+    // Use config bounds as primary, but ensure data fits
+    const configMinX = config.x_min * config.x_scale;
+    const configMaxX = config.x_max * config.x_scale;
+    const configMinY = config.y_min * config.y_scale;
+    const configMaxY = config.y_max * config.y_scale;
+
+    // Calculate data bounds
+    const dataMinX = Math.min(...allXValues);
+    const dataMaxX = Math.max(...allXValues);
+    const dataMinY = Math.min(...allYValues);
+    const dataMaxY = Math.max(...allYValues);
+
+    // Determine final bounds - use config bounds but ensure data is visible
+    let finalMinX = Math.min(configMinX, dataMinX);
+    let finalMaxX = Math.max(configMaxX, dataMaxX);
+    let finalMinY = Math.min(configMinY, dataMinY);
+    let finalMaxY = Math.max(configMaxY, dataMaxY);
+
+    // Force axis intersection visibility based on graph type
+    if (config.graph_type === 'output_characteristics' || 
+        config.graph_type === 'output_characteristics_log' ||
+        config.graph_type === 'transfer_characteristics' ||
+        config.graph_type === 'transfer_characteristics_log' ||
+        config.graph_type === 'capacitance_characteristics' ||
+        config.graph_type === 'capacitance_characteristics_log' ||
+        config.graph_type === 'reverse_drain_source_characteristics') {
+      // These graphs should start at (0,0) or have visible intersection
+      finalMinX = Math.max(0, finalMinX);
+      finalMinY = Math.max(0, finalMinY);
+    }
+
+    // Add padding to ensure intersection is visible
+    const xPadding = (finalMaxX - finalMinX) * 0.05;
+    const yPadding = (finalMaxY - finalMinY) * 0.05;
+
+    const paddedMinX = finalMinX - xPadding;
+    const paddedMaxX = finalMaxX + xPadding;
+    const paddedMinY = finalMinY - yPadding;
+    const paddedMaxY = finalMaxY + yPadding;
 
     return {
-      minX: finalMinX,
-      maxX: finalMaxX,
-      minY: finalMinY,
-      maxY: finalMaxY,
-      xRange: finalMaxX - finalMinX,
-      yRange: finalMaxY - finalMinY,
+      minX: paddedMinX,
+      maxX: paddedMaxX,
+      minY: paddedMinY,
+      maxY: paddedMaxY,
+      xRange: paddedMaxX - paddedMinX,
+      yRange: paddedMaxY - paddedMinY,
     };
   }, [curves, config]);
 
-  // Helper function to calculate uniform intervals
-  const calculateInterval = (range: number) => {
-    if (range <= 5) return 0.5;
-    if (range <= 10) return 1;
-    if (range <= 25) return 2.5;
-    if (range <= 50) return 5;
-    if (range <= 100) return 10;
-    if (range <= 250) return 25;
-    if (range <= 500) return 50;
-    return Math.ceil(range / 10);
+  // Calculate optimal tick intervals
+  const calculateTickInterval = (range: number, maxTicks: number = 10) => {
+    const roughInterval = range / maxTicks;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughInterval)));
+    const normalized = roughInterval / magnitude;
+    
+    let interval = magnitude;
+    if (normalized < 1.5) interval = magnitude;
+    else if (normalized < 3) interval = 2 * magnitude;
+    else if (normalized < 7) interval = 5 * magnitude;
+    else interval = 10 * magnitude;
+    
+    return interval;
   };
 
+  // Transform data point to SVG coordinates
   const transformPoint = (x: number, y: number) => {
     if (!graphData) return { x: 0, y: 0 };
 
     const plotWidth = width - 2 * margin;
     const plotHeight = height - 2 * margin;
 
-    // Transform coordinates using config bounds (like legacy code)
     const transformedX = margin + ((x - graphData.minX) / graphData.xRange) * plotWidth;
     const transformedY = height - margin - ((y - graphData.minY) / graphData.yRange) * plotHeight;
 
     return { x: transformedX, y: transformedY };
   };
 
-  const generateGridLines = () => {
-    if (!showGrid || !graphData) return null;
+  // Generate clean grid lines and tick marks
+  const generateGridAndTicks = () => {
+    if (!graphData) return null;
 
-    const gridLines = [];
+    const elements = [];
     const plotWidth = width - 2 * margin;
     const plotHeight = height - 2 * margin;
 
-    // Calculate uniform intervals
-    const xInterval = calculateInterval(graphData.xRange);
-    const yInterval = calculateInterval(graphData.yRange);
+    // Calculate tick intervals
+    const xTickInterval = calculateTickInterval(graphData.xRange);
+    const yTickInterval = calculateTickInterval(graphData.yRange);
 
-    // X-axis grid lines with uniform intervals
-    const xSteps = Math.ceil(graphData.xRange / xInterval);
-    for (let i = 0; i <= xSteps; i++) {
-      const x = graphData.minX + (xInterval * i);
-      if (x > graphData.maxX) break;
-      
-      const transformedX = margin + ((x - graphData.minX) / graphData.xRange) * plotWidth;
-      
-      gridLines.push(
+    // Generate X-axis ticks and grid lines
+    const xTickCount = Math.floor(graphData.xRange / xTickInterval) + 1;
+    for (let i = 0; i <= xTickCount; i++) {
+      const xValue = graphData.minX + (i * xTickInterval);
+      if (xValue > graphData.maxX) break;
+
+      const transformedX = margin + ((xValue - graphData.minX) / graphData.xRange) * plotWidth;
+
+      // Grid line
+      if (showGrid) {
+        elements.push(
+          <line
+            key={`x-grid-${i}`}
+            x1={transformedX}
+            y1={margin}
+            x2={transformedX}
+            y2={height - margin}
+            stroke="hsl(var(--border))"
+            strokeWidth="1"
+            opacity="0.3"
+          />
+        );
+      }
+
+      // Tick mark
+      elements.push(
         <line
-          key={`x-grid-${i}`}
+          key={`x-tick-${i}`}
           x1={transformedX}
-          y1={margin}
+          y1={height - margin}
           x2={transformedX}
-          y2={height - margin}
+          y2={height - margin + 5}
           stroke="hsl(var(--foreground))"
           strokeWidth="1"
-          opacity="0.6"
         />
       );
 
-      // X-axis labels - show all labels
+      // Tick label
       if (showAxisLabels) {
-        gridLines.push(
+        elements.push(
           <text
             key={`x-label-${i}`}
             x={transformedX}
-            y={height - margin + 25}
+            y={height - margin + 20}
             textAnchor="middle"
             fill="hsl(var(--foreground))"
             fontSize="11"
             fontFamily="Inter, sans-serif"
             fontWeight="500"
           >
-            {x.toFixed(1)}
+            {xValue.toFixed(1)}
           </text>
         );
       }
     }
 
-    // Y-axis grid lines with uniform intervals
-    const ySteps = Math.ceil(graphData.yRange / yInterval);
-    for (let i = 0; i <= ySteps; i++) {
-      const y = graphData.minY + (yInterval * i);
-      if (y > graphData.maxY) break;
-      
-      const transformedY = height - margin - ((y - graphData.minY) / graphData.yRange) * plotHeight;
-      
-      gridLines.push(
+    // Generate Y-axis ticks and grid lines
+    const yTickCount = Math.floor(graphData.yRange / yTickInterval) + 1;
+    for (let i = 0; i <= yTickCount; i++) {
+      const yValue = graphData.minY + (i * yTickInterval);
+      if (yValue > graphData.maxY) break;
+
+      const transformedY = height - margin - ((yValue - graphData.minY) / graphData.yRange) * plotHeight;
+
+      // Grid line
+      if (showGrid) {
+        elements.push(
+          <line
+            key={`y-grid-${i}`}
+            x1={margin}
+            y1={transformedY}
+            x2={width - margin}
+            y2={transformedY}
+            stroke="hsl(var(--border))"
+            strokeWidth="1"
+            opacity="0.3"
+          />
+        );
+      }
+
+      // Tick mark
+      elements.push(
         <line
-          key={`y-grid-${i}`}
+          key={`y-tick-${i}`}
           x1={margin}
           y1={transformedY}
-          x2={width - margin}
+          x2={margin - 5}
           y2={transformedY}
           stroke="hsl(var(--foreground))"
           strokeWidth="1"
-          opacity="0.6"
         />
       );
 
-      // Y-axis labels - show all labels
+      // Tick label
       if (showAxisLabels) {
-        gridLines.push(
+        elements.push(
           <text
             key={`y-label-${i}`}
-            x={margin - 15}
+            x={margin - 10}
             y={transformedY + 4}
             textAnchor="end"
             fill="hsl(var(--foreground))"
@@ -191,110 +239,79 @@ const EnhancedGraphViewer: React.FC<EnhancedGraphViewerProps> = ({
             dominantBaseline="middle"
             fontWeight="500"
           >
-            {y.toFixed(1)}
+            {yValue.toFixed(1)}
           </text>
         );
       }
     }
 
-    // Add X-axis line at Y=0 (the dark line that should be the X-axis)
-    const xAxisY = height - margin - ((0 - graphData.minY) / graphData.yRange) * plotHeight;
-    gridLines.push(
-      <line
-        key="x-axis-line"
-        x1={margin}
-        y1={xAxisY}
-        x2={width - margin}
-        y2={xAxisY}
-        stroke="hsl(var(--foreground))"
-        strokeWidth="2"
-        opacity="0.9"
-      />
-    );
-
-    return gridLines;
+    return elements;
   };
 
+  // Generate curve paths with corrected capacitance color meanings
   const generateCurvePaths = () => {
     if (!curves || curves.length === 0) return null;
 
-    // Define fallback colors for curves without colors
     const fallbackColors = [
-      '#FF6B6B', // Red
-      '#4ECDC4', // Teal
-      '#45B7D1', // Blue
-      '#96CEB4', // Green
-      '#FFEAA7', // Yellow
-      '#DDA0DD', // Plum
-      '#98D8C8', // Mint
-      '#F7DC6F', // Gold
-      '#BB8FCE', // Purple
-      '#85C1E9'  // Light Blue
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+      '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
     ];
 
     return curves.map((curve, curveIndex) => {
       if (curve.points.length < 2) return null;
 
-      // Use curve color or fallback color
-      const curveColor = curve.color && curve.color.trim() !== '' 
-        ? curve.color 
-        : fallbackColors[curveIndex % fallbackColors.length];
-
-      // Enhanced debug logging
-      console.log(`=== Curve ${curveIndex} Debug ===`);
-      console.log(`Name: ${curve.name}`);
-      console.log(`Original color: "${curve.color}"`);
-      console.log(`Final color: "${curveColor}"`);
-      console.log(`Color type: ${typeof curveColor}`);
-      console.log(`Color length: ${curveColor.length}`);
-      console.log(`Points count: ${curve.points.length}`);
-
-      // Sort points by x coordinate
-      const sortedPoints = [...curve.points].sort((a, b) => a.x - b.x);
-      
-      // Generate smooth path using quadratic curves
-      let pathData = '';
-      sortedPoints.forEach((point, index) => {
-        const transformed = transformPoint(point.x, point.y);
-        if (index === 0) {
-          pathData += `M ${transformed.x} ${transformed.y}`;
-        } else if (index === 1) {
-          pathData += ` L ${transformed.x} ${transformed.y}`;
+      // Fix capacitance color meanings
+      let curveColor = curve.color;
+      if (curve.color && curve.color.trim() !== '') {
+        // For capacitance characteristics, map colors correctly
+        if (config.graph_type === 'capacitance_characteristics' || 
+            config.graph_type === 'capacitance_characteristics_log') {
+          switch (curve.color.toLowerCase()) {
+            case 'red':
+              curveColor = '#FF0000'; // COSS
+              break;
+            case 'yellow':
+              curveColor = '#FFFF00'; // CISS
+              break;
+            case 'green':
+              curveColor = '#00FF00'; // CRSS
+              break;
+            default:
+              curveColor = curve.color;
+          }
         } else {
-          // Use quadratic curves for smoother lines
-          const prevPoint = transformPoint(sortedPoints[index - 1].x, sortedPoints[index - 1].y);
-          const controlX = (prevPoint.x + transformed.x) / 2;
-          pathData += ` Q ${controlX} ${prevPoint.y} ${transformed.x} ${transformed.y}`;
+          curveColor = curve.color;
         }
-      });
+      } else {
+        curveColor = fallbackColors[curveIndex % fallbackColors.length];
+      }
+
+      // Create path data
+      const pathData = curve.points.map((point, index) => {
+        const transformed = transformPoint(point.x, point.y);
+        return `${index === 0 ? 'M' : 'L'} ${transformed.x} ${transformed.y}`;
+      }).join(' ');
 
       return (
         <g key={`curve-${curveIndex}`}>
-          {/* Smooth curve line */}
           <path
             d={pathData}
             stroke={curveColor}
-            strokeWidth="3"
+            strokeWidth="2"
             fill="none"
             opacity="0.9"
-            strokeLinecap="round"
-            strokeLinejoin="round"
           />
-          {/* Add data points with better visibility */}
-          {sortedPoints.map((point, pointIndex) => {
+          {curve.points.map((point, pointIndex) => {
             const transformed = transformPoint(point.x, point.y);
             return (
-              <g key={`point-${curveIndex}-${pointIndex}`}>
-                {/* Clean data point without borders */}
-                <circle
-                  cx={transformed.x}
-                  cy={transformed.y}
-                  r="3"
-                  fill={curveColor}
-                  stroke="none"
-                  opacity="1"
-                />
-              </g>
+              <circle
+                key={`point-${curveIndex}-${pointIndex}`}
+                cx={transformed.x}
+                cy={transformed.y}
+                r="2"
+                fill={curveColor}
+                opacity="0.8"
+              />
             );
           })}
         </g>
@@ -302,62 +319,72 @@ const EnhancedGraphViewer: React.FC<EnhancedGraphViewerProps> = ({
     });
   };
 
+  // Generate legend with corrected capacitance labels
   const generateLegend = () => {
     if (!showLegend || !curves || curves.length === 0) return null;
 
-    // Define fallback colors for curves without colors
-    const fallbackColors = [
-      '#FF6B6B', // Red
-      '#4ECDC4', // Teal
-      '#45B7D1', // Blue
-      '#96CEB4', // Green
-      '#FFEAA7', // Yellow
-      '#DDA0DD', // Plum
-      '#98D8C8', // Mint
-      '#F7DC6F', // Gold
-      '#BB8FCE', // Purple
-      '#85C1E9'  // Light Blue
-    ];
-
     const legendItems = curves.map((curve, index) => {
-      const legendY = 40 + index * 25;
-      
-      // Use curve color or fallback color
-      const curveColor = curve.color && curve.color.trim() !== '' 
-        ? curve.color 
-        : fallbackColors[index % fallbackColors.length];
-      
+      let color = curve.color;
+      let label = curve.name;
+
+      // Fix capacitance color meanings and labels
+      if (config.graph_type === 'capacitance_characteristics' || 
+          config.graph_type === 'capacitance_characteristics_log') {
+        switch (curve.color.toLowerCase()) {
+          case 'red':
+            color = '#FF0000';
+            label = 'COSS = CGD + CSD';
+            break;
+          case 'yellow':
+            color = '#FFFF00';
+            label = 'CISS = CGD + CGS';
+            break;
+          case 'green':
+            color = '#00FF00';
+            label = 'CRSS = CGD';
+            break;
+          default:
+            color = curve.color || '#FF6B6B';
+            label = curve.name;
+        }
+      } else {
+        color = curve.color || '#FF6B6B';
+        label = curve.name;
+      }
+
+      const y = 30 + (index * 25);
+
       return (
         <g key={`legend-${index}`}>
           <line
-            x1={width - 200}
-            y1={legendY}
-            x2={width - 180}
-            y2={legendY}
-            stroke={curveColor}
+            x1={width - 150}
+            y1={y}
+            x2={width - 130}
+            y2={y}
+            stroke={color}
             strokeWidth="3"
           />
           <text
-            x={width - 170}
-            y={legendY + 4}
+            x={width - 125}
+            y={y + 4}
             fill="hsl(var(--foreground))"
             fontSize="12"
             fontFamily="Inter, sans-serif"
             fontWeight="500"
           >
-            {curve.name}
+            {label}
           </text>
         </g>
       );
     });
 
     return (
-      <g>
+      <g className="legend">
         <rect
-          x={width - 210}
+          x={width - 160}
           y={20}
-          width={190}
-          height={curves.length * 25 + 20}
+          width="140"
+          height={curves.length * 25 + 10}
           fill="hsl(var(--background))"
           stroke="hsl(var(--border))"
           strokeWidth="1"
@@ -369,6 +396,7 @@ const EnhancedGraphViewer: React.FC<EnhancedGraphViewerProps> = ({
     );
   };
 
+  // Generate axis labels
   const generateAxisLabels = () => {
     if (!showAxisLabels || !graphData) return null;
 
@@ -377,12 +405,12 @@ const EnhancedGraphViewer: React.FC<EnhancedGraphViewerProps> = ({
         {/* X-axis label */}
         <text
           x={width / 2}
-          y={height - 20}
+          y={height - 10}
           textAnchor="middle"
           fill="hsl(var(--foreground))"
           fontSize="14"
           fontFamily="Inter, sans-serif"
-          fontWeight="500"
+          fontWeight="600"
         >
           {config.x_axis_name || 'X-Axis'}
         </text>
@@ -395,52 +423,10 @@ const EnhancedGraphViewer: React.FC<EnhancedGraphViewerProps> = ({
           fill="hsl(var(--foreground))"
           fontSize="14"
           fontFamily="Inter, sans-serif"
-          fontWeight="500"
+          fontWeight="600"
           transform={`rotate(-90, 20, ${height / 2})`}
         >
           {config.y_axis_name || 'Y-Axis'}
-        </text>
-
-        {/* Axis values */}
-        <text
-          x={margin - 10}
-          y={height - margin + 20}
-          textAnchor="end"
-          fill="hsl(var(--muted-foreground))"
-          fontSize="12"
-          fontFamily="Inter, sans-serif"
-        >
-          {graphData.minX.toFixed(1)}
-        </text>
-        <text
-          x={width - margin + 10}
-          y={height - margin + 20}
-          textAnchor="start"
-          fill="hsl(var(--muted-foreground))"
-          fontSize="12"
-          fontFamily="Inter, sans-serif"
-        >
-          {graphData.maxX.toFixed(1)}
-        </text>
-        <text
-          x={margin - 10}
-          y={height - margin + 4}
-          textAnchor="end"
-          fill="hsl(var(--muted-foreground))"
-          fontSize="12"
-          fontFamily="Inter, sans-serif"
-        >
-          {graphData.minY.toFixed(1)}
-        </text>
-        <text
-          x={margin - 10}
-          y={margin - 4}
-          textAnchor="end"
-          fill="hsl(var(--muted-foreground))"
-          fontSize="12"
-          fontFamily="Inter, sans-serif"
-        >
-          {graphData.maxY.toFixed(1)}
         </text>
       </g>
     );
@@ -462,7 +448,6 @@ const EnhancedGraphViewer: React.FC<EnhancedGraphViewerProps> = ({
 
   return (
     <div className="enhanced-graph-viewer" style={{ width: width, height: height }}>
-      {/* Only show title if explicitly requested */}
       {showTitle && title && (
         <div className="graph-title">
           <h3>{title}</h3>
@@ -470,20 +455,13 @@ const EnhancedGraphViewer: React.FC<EnhancedGraphViewerProps> = ({
       )}
       
       <svg width={width} height={height}>
-        <defs>
-          <linearGradient id="grid-gradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="hsl(var(--muted) / 0.1)"/>
-            <stop offset="100%" stopColor="hsl(var(--muted) / 0.05)"/>
-          </linearGradient>
-        </defs>
-        
         {/* Background */}
         <rect width="100%" height="100%" fill="hsl(var(--background))" />
         
-        {/* Grid lines */}
-        {generateGridLines()}
+        {/* Grid lines and tick marks */}
+        {generateGridAndTicks()}
         
-        {/* Axes */}
+        {/* Main axes */}
         <line
           x1={margin}
           y1={height - margin}
@@ -505,10 +483,10 @@ const EnhancedGraphViewer: React.FC<EnhancedGraphViewerProps> = ({
         {generateCurvePaths()}
         
         {/* Axis labels */}
-        {showAxisLabels && generateAxisLabels()}
+        {generateAxisLabels()}
         
         {/* Legend */}
-        {showLegend && generateLegend()}
+        {generateLegend()}
       </svg>
     </div>
   );

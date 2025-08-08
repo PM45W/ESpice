@@ -1,5 +1,3 @@
-import { invoke } from '@tauri-apps/api/core'
-
 export interface Manufacturer {
   name: string
   display_name: string

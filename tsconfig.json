@@ -32,9 +32,11 @@
       "@/types/*": ["types/*"],
       "@/utils/*": ["utils/*"],
       "@/hooks/*": ["hooks/*"],
-      "@/lib/*": ["lib/*"]
+      "@/lib/*": ["lib/*"],
+      "@espice/ui": ["../../packages/ui/src"],
+      "@espice/ui/*": ["../../packages/ui/src/*"]
     }
   },
-  "include": ["apps/desktop/src"],
+  "include": ["apps/desktop/src", "packages/ui/src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 } 

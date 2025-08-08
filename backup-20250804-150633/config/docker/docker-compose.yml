@@ -1,0 +1,377 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build: ./services/api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - PDF_SERVICE_URL=http://pdf-service:8002
+      - IMAGE_SERVICE_URL=http://image-service:8003
+      - TABLE_SERVICE_URL=http://table-service:8004
+      - SPICE_SERVICE_URL=http://spice-service:8005
+      - PDK_CHECKER_SERVICE_URL=http://pdk-checker:8010
+      - WEB_SCRAPER_SERVICE_URL=http://web-scraper:8011
+      - CUSTOMIZATION_MANAGER_SERVICE_URL=http://customization-manager:8012
+      - AUTH_SERVICE_URL=http://auth-service:8013
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8014
+      - MONITORING_SERVICE_URL=http://monitoring-service:8015
+      - DATA_ANALYTICS_SERVICE_URL=http://data-analytics:8016
+      - RATE_LIMITER_SERVICE_URL=http://rate-limiter:8017
+      - BACKUP_RECOVERY_SERVICE_URL=http://backup-recovery:8018
+      - LOAD_BALANCER_SERVICE_URL=http://load-balancer:8019
+    depends_on:
+      - pdf-service
+      - image-service
+      - table-service
+      - spice-service
+      - pdk-checker
+      - web-scraper
+      - customization-manager
+      - auth-service
+      - notification-service
+      - monitoring-service
+      - data-analytics
+      - rate-limiter
+      - backup-recovery
+      - load-balancer
+    networks:
+      - espice-network
+    restart: unless-stopped
+
+  pdf-service:
+    build: ./services/pdf-service
+    ports:
+      - "8002:8002"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./temp:/app/temp
+
+  image-service:
+    build: ./services/image-service
+    ports:
+      - "8003:8003"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./temp:/app/temp
+
+  table-service:
+    build: ./services/table-service
+    ports:
+      - "8004:8004"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - espice-network
+    restart: unless-stopped
+
+  spice-service:
+    build: ./services/spice-service
+    ports:
+      - "8005:8005"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - espice-network
+    restart: unless-stopped
+
+  ai-agent:
+    build: ./services/ai-agent
+    ports:
+      - "8006:8006"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OLLAMA_URL=http://host.docker.internal:11434
+    depends_on:
+      - pdf-service
+      - image-service
+      - table-service
+      - spice-service
+    networks:
+      - espice-network
+    restart: unless-stopped
+
+  batch-processor:
+    build: ./services/batch-processor
+    ports:
+      - "8007:8007"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - ai-agent
+      - pdf-service
+      - image-service
+      - table-service
+      - spice-service
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./temp:/app/uploads
+      - ./examples:/app/data
+
+  version-control:
+    build: ./services/version-control
+    ports:
+      - "8008:8008"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - spice-service
+      - batch-processor
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./models:/app/models
+
+  test-correlation:
+    build: ./services/test-correlation
+    ports:
+      - "8009:8009"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - spice-service
+      - version-control
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./test_data:/app/test_data
+      - ./correlation_results:/app/correlation_results
+
+  pdk-checker:
+    build: ./services/pdk-checker
+    ports:
+      - "8010:8010"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - spice-service
+      - version-control
+      - test-correlation
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./pdk_rules:/app/pdk_rules
+      - ./validation_results:/app/validation_results
+
+  web-scraper:
+    build: ./services/web-scraper
+    ports:
+      - "8011:8011"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - spice-service
+      - pdk-checker
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./datasheets:/app/datasheets
+      - ./scraped_data:/app/scraped_data
+
+  customization-manager:
+    build: ./services/customization-manager
+    ports:
+      - "8012:8012"
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - spice-service
+      - web-scraper
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./customization_data:/app/customization_data
+      - ./templates:/app/templates
+      - ./exports:/app/exports
+
+  auth-service:
+    build: ./services/auth-service
+    ports:
+      - "8013:8013"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - JWT_SECRET=your-secret-key-change-in-production
+    depends_on:
+      - customization-manager
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./auth_data:/app/auth_data
+      - ./audit_logs:/app/logs
+
+  notification-service:
+    build: ./services/notification-service
+    ports:
+      - "8014:8014"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SMTP_SERVER=smtp.example.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=user@example.com
+      - SMTP_PASSWORD=yourpassword
+      - FROM_EMAIL=noreply@example.com
+      - SMTP_USE_TLS=1
+      - SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+      - TEAMS_WEBHOOK_URL=https://outlook.office.com/webhook/...
+      - SMS_PROVIDER=twilio
+      - SMS_API_KEY=your-twilio-api-key
+      - SMS_FROM_NUMBER=+1234567890
+    depends_on:
+      - auth-service
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./notification_data:/app/notification_data
+      - ./logs:/app/logs
+
+  monitoring-service:
+    build: ./services/monitoring-service
+    ports:
+      - "8015:8015"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PROMETHEUS_PORT=9090
+      - GRAFANA_PORT=3000
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - KIBANA_URL=http://kibana:5601
+      - JAEGER_URL=http://jaeger:16686
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+      - METRICS_RETENTION_DAYS=30
+      - ALERT_CHECK_INTERVAL=60
+      - APM_SERVER_URL=http://apm-server:8200
+    depends_on:
+      - notification-service
+      - redis
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./monitoring_data:/app/monitoring_data
+      - ./logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  data-analytics:
+    build: ./services/data-analytics
+    ports:
+      - "8016:8016"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_PATH=/app/analytics_data/analytics.db
+      - REPORT_STORAGE_PATH=/app/reports
+      - REDIS_URL=redis://redis:6379
+      - CACHE_TTL=3600
+      - MAX_WORKERS=4
+      - LOG_LEVEL=INFO
+    depends_on:
+      - monitoring-service
+      - redis
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./analytics_data:/app/analytics_data
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+
+  rate-limiter:
+    build: ./services/rate-limiter
+    ports:
+      - "8017:8017"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_PATH=/app/rate_limiter_data/rate_limiter.db
+      - REDIS_URL=redis://redis:6379
+      - DEFAULT_RATE_LIMIT=100
+      - DEFAULT_BURST_LIMIT=10
+      - CLEANUP_INTERVAL=3600
+      - ENABLE_THROTTLING=true
+      - LOG_LEVEL=INFO
+    depends_on:
+      - data-analytics
+      - redis
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./rate_limiter_data:/app/rate_limiter_data
+      - ./logs:/app/logs
+
+  backup-recovery:
+    build: ./services/backup-recovery
+    ports:
+      - "8018:8018"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_PATH=/app/backup_data/backup.db
+      - BACKUP_STORAGE_PATH=/app/backups
+      - BACKUP_RETENTION_DAYS=30
+      - MAX_BACKUP_SIZE_GB=10
+      - ENABLE_COMPRESSION=true
+      - ENABLE_ENCRYPTION=false
+      - LOG_LEVEL=INFO
+    depends_on:
+      - rate-limiter
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./backup_data:/app/backup_data
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+
+  load-balancer:
+    build: ./services/load-balancer
+    ports:
+      - "8019:8019"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_PATH=/app/load_balancer_data/load_balancer.db
+      - HEALTH_CHECK_INTERVAL=30
+      - HEALTH_CHECK_TIMEOUT=5
+      - MAX_RETRIES=3
+      - SESSION_STICKINESS=true
+      - STICKY_SESSION_TIMEOUT=3600
+      - LOG_LEVEL=INFO
+    depends_on:
+      - backup-recovery
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - ./load_balancer_data:/app/load_balancer_data
+      - ./logs:/app/logs
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - espice-network
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+
+networks:
+  espice-network:
+    driver: bridge
+
+volumes:
+  redis-data: 

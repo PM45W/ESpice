@@ -195,7 +195,7 @@ def extract_ute_utes_uted():
     plt.title('R_DS(on) vs. V_GS for Different Temperatures (EPC2040)')
     plt.legend()
     plt.grid(True)
-    plt.show())
+    plt.show()
 
     if ute is not None:
         print(f"UTE (Channel Mobility Temperature Coefficient): {ute:.4e}")
@@ -503,7 +503,7 @@ def extract_transfer_params():
         kp = np.exp(intercept)
         return vse, kp
 
-    vse_init, kp_25_init = log_fit(data_by_temp[25]["vgs'].values, data_by_temp[25]["id"].values, voff_init)
+    vse_init, kp_25_init = log_fit(data_by_temp[25]["vgs"].values, data_by_temp[25]["id"].values, voff_init)
     _, kp_125_init = log_fit(data_by_temp[125]["vgs"].values, data_by_temp[125]["id"].values, voff_init)
 
     # Combined fitting model
@@ -652,7 +652,7 @@ def extract_rth0():
     # Check if Id is constant
     if data['Id'].nunique() != 1:
         print("Warning: Id is not constant. Using data for Id = 1.5 A.")
-        data = data[data['Id"] == 1.5]
+        data = data[data['Id'] == 1.5]
 
     if data.empty:
         print("Error: No data for Id = 1.5 A.")

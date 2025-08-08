@@ -20,11 +20,16 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Progress } from './ui/progress';
-import { Badge } from './ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Separator } from './ui/separator';
+import { 
+  Button, 
+  Progress, 
+  Badge, 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  Separator 
+} from '@espice/ui';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';

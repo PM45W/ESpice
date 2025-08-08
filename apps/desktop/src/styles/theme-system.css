@@ -639,10 +639,12 @@ body {
 /* ===== SWITCH AND TOGGLE STYLES ===== */
 
 /* Base switch/toggle styles */
+/* Exclude Radix UI Switch components from generic styling */
 input[type="checkbox"],
 input[type="radio"],
 .switch,
-.toggle {
+.toggle,
+[data-state="checked"]:not([data-radix-switch-root]) {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -783,6 +785,55 @@ input[type="radio"]:focus,
 .toggle:checked::after {
   transform: translateX(20px);
   background-color: hsl(var(--primary-foreground));
+}
+
+/* ===== CUSTOM SWITCH SPECIFIC STYLES ===== */
+
+/* Ensure custom Switch components are not affected by generic input styles */
+button[role="switch"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  box-shadow: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  /* Ensure proper display */
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  /* Ensure proper dimensions */
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  /* Prevent any shape-shifting */
+  border: 2px solid transparent;
+  background-color: transparent;
+}
+
+/* Remove any pseudo-elements that might interfere with custom Switch */
+button[role="switch"]::before,
+button[role="switch"]::after {
+  display: none;
+  content: none;
+}
+
+/* Ensure custom Switch thumb is properly styled */
+button[role="switch"] > span {
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease-in-out;
+  pointer-events: none;
+  /* Ensure proper positioning */
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transform: translateX(0);
 }
 
 /* ===== UTILITY CLASSES ===== */ 

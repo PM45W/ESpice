@@ -481,11 +481,12 @@ select, option, [data-radix-popper-content-wrapper], [role="menu"], [role="listb
 /* ===== ENHANCED SWITCH AND TOGGLE STYLES ===== */
 
 /* Base switch/toggle styles - High specificity to ensure they work */
+/* Exclude Radix UI Switch components from generic styling */
 input[type="checkbox"],
 input[type="radio"],
 .switch,
 .toggle,
-[data-state="checked"] {
+[data-state="checked"]:not([data-radix-switch-root]) {
   appearance: none !important;
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
@@ -501,14 +502,14 @@ input[type="radio"],
 
 /* Checkbox specific styles */
 input[type="checkbox"]:checked,
-input[type="checkbox"][data-state="checked"] {
+input[type="checkbox"][data-state="checked"]:not([data-radix-switch-root]) {
   background-color: hsl(var(--primary)) !important;
   border-color: hsl(var(--primary)) !important;
   box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2) !important;
 }
 
 input[type="checkbox"]:checked::after,
-input[type="checkbox"][data-state="checked"]::after {
+input[type="checkbox"][data-state="checked"]:not([data-radix-switch-root])::after {
   content: '✓' !important;
   position: absolute !important;
   top: 50% !important;
@@ -521,19 +522,19 @@ input[type="checkbox"][data-state="checked"]::after {
 
 /* Radio button specific styles */
 input[type="radio"],
-input[type="radio"][data-state="checked"] {
+input[type="radio"][data-state="checked"]:not([data-radix-switch-root]) {
   border-radius: 50% !important;
 }
 
 input[type="radio"]:checked,
-input[type="radio"][data-state="checked"] {
+input[type="radio"][data-state="checked"]:not([data-radix-switch-root]) {
   background-color: hsl(var(--primary)) !important;
   border-color: hsl(var(--primary)) !important;
   box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2) !important;
 }
 
 input[type="radio"]:checked::after,
-input[type="radio"][data-state="checked"]::after {
+input[type="radio"][data-state="checked"]:not([data-radix-switch-root])::after {
   content: '' !important;
   position: absolute !important;
   top: 50% !important;
@@ -977,75 +978,105 @@ button:hover {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* ===== SPICE GENERATION SWITCH STYLES ===== */
+/* ===== CUSTOM SWITCH STYLES ===== */
 
-/* Ensure proper switch behavior and prevent shrinking */
-#include-comments,
-#include-subckt,
-[data-testid="include-comments"],
-[data-testid="include-subckt"] {
-  min-width: 44px !important;
-  min-height: 24px !important;
-  flex-shrink: 0 !important;
-  transition: all 0.2s ease-in-out !important;
-  border-radius: 12px !important;
+/* Ensure proper switch behavior for custom switches */
+button[role="switch"] {
+  min-width: 44px;
+  min-height: 24px;
+  flex-shrink: 0;
+  transition: all 0.2s ease-in-out;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  /* Enhanced visual effects */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* Force green/red colors for SPICE switches */
-#include-comments[data-state="checked"],
-#include-subckt[data-state="checked"],
-[data-testid="include-comments"][data-state="checked"],
-[data-testid="include-subckt"][data-state="checked"] {
-  background-color: rgb(34 197 94) !important; /* green-500 */
-}
-
-#include-comments[data-state="unchecked"],
-#include-subckt[data-state="unchecked"],
-[data-testid="include-comments"][data-state="unchecked"],
-[data-testid="include-subckt"][data-state="unchecked"] {
-  background-color: rgb(239 68 68) !important; /* red-500 */
-}
-
-/* Dark mode colors */
-.dark #include-comments[data-state="checked"],
-.dark #include-subckt[data-state="checked"],
-.dark [data-testid="include-comments"][data-state="checked"],
-.dark [data-testid="include-subckt"][data-state="checked"] {
-  background-color: rgb(22 163 74) !important; /* green-600 */
-}
-
-.dark #include-comments[data-state="unchecked"],
-.dark #include-subckt[data-state="unchecked"],
-.dark [data-testid="include-comments"][data-state="unchecked"],
-.dark [data-testid="include-subckt"][data-state="unchecked"] {
-  background-color: rgb(220 38 38) !important; /* red-600 */
-}
-
-/* Enhanced hover effects for SPICE switches */
-#include-comments:hover,
-#include-subckt:hover,
-[data-testid="include-comments"]:hover,
-[data-testid="include-subckt"]:hover {
-  transform: scale(1.02) !important;
+/* Enhanced hover effects for custom switches */
+button[role="switch"]:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* Focus states for accessibility */
-#include-comments:focus,
-#include-subckt:focus,
-[data-testid="include-comments"]:focus,
-[data-testid="include-subckt"]:focus {
-  outline: 2px solid hsl(var(--primary)) !important;
-  outline-offset: 2px !important;
+button[role="switch"]:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* Ensure thumb maintains round shape and white color */
-#include-comments [data-radix-switch-thumb],
-#include-subckt [data-radix-switch-thumb],
-[data-testid="include-comments"] [data-radix-switch-thumb],
-[data-testid="include-subckt"] [data-radix-switch-thumb] {
-  min-width: 20px !important;
-  min-height: 20px !important;
-  flex-shrink: 0 !important;
+/* Ensure thumb maintains round shape and white color for custom switches */
+button[role="switch"] > span {
+  min-width: 20px;
+  min-height: 20px;
+  flex-shrink: 0;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  /* Enhanced thumb glow effect */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+/* Focus states for accessibility */
+button[role="switch"]:focus {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Ensure thumb maintains round shape and white color for custom switches */
+button[role="switch"] > span {
+  min-width: 20px;
+  min-height: 20px;
+  flex-shrink: 0;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== RADIX UI SWITCH SPECIFIC STYLES ===== */
+
+/* Ensure Radix UI Switch components are not affected by generic input styles */
+[data-radix-switch-root] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+  position: relative !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  /* Ensure proper dimensions */
+  width: 44px !important;
+  height: 24px !important;
+  border-radius: 12px !important;
+}
+
+/* Remove any pseudo-elements that might interfere with Radix UI Switch */
+[data-radix-switch-root]::before,
+[data-radix-switch-root]::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Ensure Radix UI Switch thumb is properly styled */
+[data-radix-switch-thumb] {
   background-color: white !important;
   border-radius: 50% !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease-in-out !important;
+  pointer-events: none !important;
 }

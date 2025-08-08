@@ -25,13 +25,23 @@ import PDKCompatibilityService, {
   type PDKValidationResult,
   type EDAExportOptions 
 } from '../services/pdkCompatibilityService';
-import { Button } from '../components/ui/button';
-import { Progress } from '../components/ui/progress';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Switch } from '../components/ui/switch';
-import { Label } from '../components/ui/label';
-import { Separator } from '../components/ui/separator';
+import { 
+  Button,
+  Progress,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+  Label,
+  Separator
+} from '@espice/ui';
 import { useSystemMonitor } from '../hooks/useSystemMonitor';
 import { productService } from '../services/productService';
 import type { SPICEModel, Product } from '../types';

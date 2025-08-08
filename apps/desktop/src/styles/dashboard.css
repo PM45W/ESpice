@@ -124,26 +124,16 @@
   font-family: var(--font-mono);
 }
 
-/* Simple Toggle Styling */
-.service-toggle-card button {
-  background: var(--muted-foreground) !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
+/* Service Toggle Card - Switch styling is now handled by unified Switch component */
+.service-toggle-card {
+  /* Ensure proper spacing and alignment for the unified switch */
+  align-items: center;
+  justify-content: space-between;
+  /* Ensure switch container doesn't interfere with switch styling */
+  overflow: visible !important;
 }
 
-.service-toggle-card button[aria-checked="true"] {
-  background: var(--success-500) !important;
-}
-
-.service-toggle-card button:hover {
-  opacity: 0.8;
-}
-
-.service-toggle-card button:focus {
-  outline: 2px solid var(--primary) !important;
-  outline-offset: 2px !important;
-}
+/* Switch styling is now handled by the unified theme system */
 
 /* Quick Actions - 2x2 Grid */
 .quick-actions-grid {
@@ -530,10 +520,4 @@
 }
 
 /* Dark mode toggle adjustments */
-.dark .service-toggle-card button {
-  background: var(--muted-foreground) !important;
-}
-
-.dark .service-toggle-card button[aria-checked="true"] {
-  background: var(--success-500) !important;
-} 
+/* Dark mode styles are now handled by the unified Switch component */ 

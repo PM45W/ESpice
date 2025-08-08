@@ -18,11 +18,7 @@ import {
   Clock,
   Info
 } from 'lucide-react'
-import { Button } from '../components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Progress } from '../components/ui/progress'
-import { Badge } from '../components/ui/badge'
-import { Separator } from '../components/ui/separator'
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Progress, Badge, Separator } from '@espice/ui'
 import { useSystemMonitor } from '../hooks/useSystemMonitor'
 import { EnhancedPDFProcessor } from '../services/enhancedPDFProcessor';
 import { ParameterValidationService } from '../services/parameterValidationService';

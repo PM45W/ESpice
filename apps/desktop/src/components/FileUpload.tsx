@@ -1,8 +1,7 @@
 import React, { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, FileText, CheckCircle, AlertCircle } from 'lucide-react'
-import { Button } from './ui/button'
-import { Progress } from './ui/progress'
+import { Button, Progress } from '@espice/ui'
 import { cn } from '@/lib/utils'
 
 interface FileUploadProps {

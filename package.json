@@ -1,6 +1,10 @@
 {
   "name": "espice",
   "version": "1.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "description": "ESpice is a professional desktop application for generating SPICE models from semiconductor datasheet parameters. Built with **Tauri (Rust)** and **React**, it provides a modern interface with native performance for curve extraction and model generation.",
   "main": "index.js",
   "directories": {

@@ -1,0 +1,139 @@
+{
+  "timestamp": "2025-07-29T10:24:49.301270",
+  "total_products": 10,
+  "datasheets_downloaded": 1,
+  "errors": [],
+  "products": [
+    {
+      "part_number": "IGT60R070D1",
+      "name": "CoolGaN™ 600 V Enhancement Mode HEMT",
+      "description": "Infineon CoolGaN™ 600 V Enhancement Mode HEMT for power applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/igt60r070d1",
+      "datasheet_url": "https://www.infineon.com/dgdl/Infineon-IGT60R070D1-DataSheet-v02_00-EN.pdf",
+      "specifications": {
+        "voltage_rating": 60.0,
+        "current_rating": 70.0,
+        "package_type": "TO-247"
+      },
+      "scraped_at": "2025-07-29T10:24:26.379975"
+    },
+    {
+      "part_number": "IGT60R190D1",
+      "name": "CoolGaN™ 600 V Enhancement Mode HEMT",
+      "description": "Infineon CoolGaN™ 600 V Enhancement Mode HEMT for power applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/igt60r190d1",
+      "datasheet_url": "https://www.infineon.com/dgdl/Infineon-IGT60R190D1-DataSheet-v02_00-EN.pdf",
+      "specifications": {
+        "voltage_rating": 60.0,
+        "current_rating": 190.0,
+        "package_type": "TO-247"
+      },
+      "scraped_at": "2025-07-29T10:24:28.938658",
+      "datasheet_path": "datasheets\\infineon\\Infineon-IGT60R190D1-DataSheet-v02_00-EN.pdf"
+    },
+    {
+      "part_number": "IGT60R190D1S",
+      "name": "CoolGaN™ 600 V Enhancement Mode HEMT",
+      "description": "Infineon CoolGaN™ 600 V Enhancement Mode HEMT for power applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/igt60r190d1s",
+      "datasheet_url": "https://www.infineon.com/dgdl/Infineon-IGT60R190D1S-DataSheet-v02_00-EN.pdf",
+      "specifications": {
+        "voltage_rating": 60.0,
+        "current_rating": 190.0,
+        "package_type": "TO-247"
+      },
+      "scraped_at": "2025-07-29T10:24:31.103168"
+    },
+    {
+      "part_number": "IGT60R190D1S2",
+      "name": "CoolGaN™ 600 V Enhancement Mode HEMT",
+      "description": "Infineon CoolGaN™ 600 V Enhancement Mode HEMT for power applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/igt60r190d1s2",
+      "datasheet_url": "https://www.infineon.com/dgdl/Infineon-IGT60R190D1S2-DataSheet-v02_00-EN.pdf",
+      "specifications": {
+        "voltage_rating": 60.0,
+        "current_rating": 190.0,
+        "package_type": "TO-247"
+      },
+      "scraped_at": "2025-07-29T10:24:33.324316"
+    },
+    {
+      "part_number": "IGT60R190D1S3",
+      "name": "CoolGaN™ 600 V Enhancement Mode HEMT",
+      "description": "Infineon CoolGaN™ 600 V Enhancement Mode HEMT for power applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/igt60r190d1s3",
+      "datasheet_url": "https://www.infineon.com/dgdl/Infineon-IGT60R190D1S3-DataSheet-v02_00-EN.pdf",
+      "specifications": {
+        "voltage_rating": 60.0,
+        "current_rating": 190.0,
+        "package_type": "TO-247"
+      },
+      "scraped_at": "2025-07-29T10:24:35.586893"
+    },
+    {
+      "part_number": "IGT60R190D1S4",
+      "name": "CoolGaN™ 600 V Enhancement Mode HEMT",
+      "description": "Infineon CoolGaN™ 600 V Enhancement Mode HEMT for power applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/igt60r190d1s4",
+      "datasheet_url": "https://www.infineon.com/dgdl/Infineon-IGT60R190D1S4-DataSheet-v02_00-EN.pdf",
+      "specifications": {
+        "voltage_rating": 60.0,
+        "current_rating": 190.0,
+        "package_type": "TO-247"
+      },
+      "scraped_at": "2025-07-29T10:24:37.850713"
+    },
+    {
+      "part_number": "IGT60R190D1S5",
+      "name": "CoolGaN™ 600 V Enhancement Mode HEMT",
+      "description": "Infineon CoolGaN™ 600 V Enhancement Mode HEMT for power applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/igt60r190d1s5",
+      "datasheet_url": "https://www.infineon.com/dgdl/Infineon-IGT60R190D1S5-DataSheet-v02_00-EN.pdf",
+      "specifications": {
+        "voltage_rating": 60.0,
+        "current_rating": 190.0,
+        "package_type": "TO-247"
+      },
+      "scraped_at": "2025-07-29T10:24:40.133407"
+    },
+    {
+      "part_number": "IGT60R190D1S6",
+      "name": "CoolGaN™ 600 V Enhancement Mode HEMT",
+      "description": "Infineon CoolGaN™ 600 V Enhancement Mode HEMT for power applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/igt60r190d1s6",
+      "datasheet_url": "https://www.infineon.com/dgdl/Infineon-IGT60R190D1S6-DataSheet-v02_00-EN.pdf",
+      "specifications": {
+        "voltage_rating": 60.0,
+        "current_rating": 190.0,
+        "package_type": "TO-247"
+      },
+      "scraped_at": "2025-07-29T10:24:42.410092"
+    },
+    {
+      "part_number": "IGT60R190D1S7",
+      "name": "CoolGaN™ 600 V Enhancement Mode HEMT",
+      "description": "Infineon CoolGaN™ 600 V Enhancement Mode HEMT for power applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/igt60r190d1s7",
+      "datasheet_url": "https://www.infineon.com/dgdl/Infineon-IGT60R190D1S7-DataSheet-v02_00-EN.pdf",
+      "specifications": {
+        "voltage_rating": 60.0,
+        "current_rating": 190.0,
+        "package_type": "TO-247"
+      },
+      "scraped_at": "2025-07-29T10:24:44.717978"
+    },
+    {
+      "part_number": "IGT60R190D1S8",
+      "name": "CoolGaN™ 600 V Enhancement Mode HEMT",
+      "description": "Infineon CoolGaN™ 600 V Enhancement Mode HEMT for power applications",
+      "product_url": "https://www.infineon.com/products/power/gallium-nitride/igt60r190d1s8",
+      "datasheet_url": "https://www.infineon.com/dgdl/Infineon-IGT60R190D1S8-DataSheet-v02_00-EN.pdf",
+      "specifications": {
+        "voltage_rating": 60.0,
+        "current_rating": 190.0,
+        "package_type": "TO-247"
+      },
+      "scraped_at": "2025-07-29T10:24:46.998530"
+    }
+  ]
+}

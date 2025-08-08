@@ -1,0 +1,142 @@
+version: 4.29.0
+workflow:
+  name: Brownfield Fullstack Development
+  description: Optimized workflow for existing fullstack projects with established architecture
+  type: brownfield-fullstack
+  phases:
+    - analysis
+    - planning
+    - implementation
+    - testing
+    - deployment
+
+analysis:
+  duration: 1-2 days
+  activities:
+    - review-current-architecture
+    - identify-improvement-areas
+    - assess-technical-debt
+    - validate-requirements
+  outputs:
+    - architecture-assessment.md
+    - technical-debt-report.md
+    - improvement-roadmap.md
+
+planning:
+  duration: 2-3 days
+  activities:
+    - create-implementation-plan
+    - prioritize-features
+    - estimate-effort
+    - define-success-criteria
+  outputs:
+    - implementation-plan.md
+    - feature-priority-matrix.md
+    - effort-estimates.md
+
+implementation:
+  duration: 2-4 weeks
+  activities:
+    - implement-core-features
+    - refactor-existing-code
+    - add-new-functionality
+    - integrate-components
+  outputs:
+    - working-features
+    - refactored-code
+    - integration-tests
+
+testing:
+  duration: 1-2 weeks
+  activities:
+    - unit-testing
+    - integration-testing
+    - performance-testing
+    - user-acceptance-testing
+  outputs:
+    - test-results
+    - performance-metrics
+    - bug-reports
+
+deployment:
+  duration: 1-2 days
+  activities:
+    - prepare-deployment
+    - deploy-to-staging
+    - deploy-to-production
+    - monitor-performance
+  outputs:
+    - deployed-application
+    - monitoring-dashboard
+    - deployment-documentation
+
+agents:
+  - pm
+  - architect
+  - dev
+  - qa
+  - sm
+
+tools:
+  - git
+  - docker
+  - kubernetes
+  - monitoring
+  - testing
+
+checklists:
+  - pm-checklist
+  - architect-checklist
+  - story-dod-checklist
+  - story-draft-checklist
+
+templates:
+  - brownfield-architecture-tmpl
+  - brownfield-prd-tmpl
+  - story-tmpl
+
+data:
+  - technical-preferences
+  - bmad-kb
+  - elicitation-methods
+
+tasks:
+  - brownfield-create-story
+  - brownfield-create-epic
+  - validate-next-story
+  - execute-checklist
+  - correct-course
+  - create-doc
+  - shard-doc
+  - index-docs
+
+espresso:
+  enabled: true
+  mode: brownfield
+  focus: fullstack-optimization
+  constraints:
+    - maintain-existing-architecture
+    - minimize-breaking-changes
+    - preserve-user-data
+    - ensure-backward-compatibility
+
+project-specific:
+  current-phase: production-integration
+  target-release: Q4-2025
+  tech-stack:
+    - tauri
+    - react
+    - typescript
+    - rust
+    - python
+    - fastapi
+  architecture:
+    - microservices
+    - desktop-app
+    - mcp-server
+    - docker
+  priorities:
+    - batch-processing
+    - pdk-integration
+    - performance-optimization
+    - enterprise-features

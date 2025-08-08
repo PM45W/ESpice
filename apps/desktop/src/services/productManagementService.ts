@@ -1,5 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
-
 export interface CurveData {
   url: string;
   path: string;
@@ -8,7 +6,9 @@ export interface CurveData {
 
 export interface CharacteristicData {
   id: string;
-  type: 'output' | 'transfer' | 'rds_vgs_temp' | 'rds_vgs_current' | 'reverse_drain_source' | 'capacitance';
+  // Allow broader set of graph/characteristic types coming from extraction presets
+  // Keep existing known literals for compatibility, but accept arbitrary string values as well
+  type: 'output' | 'transfer' | 'rds_vgs_temp' | 'rds_vgs_current' | 'reverse_drain_source' | 'capacitance' | string;
   name: string;
   description: string;
   csvPath?: string;
@@ -54,6 +54,7 @@ export interface ProductParameter {
   unit?: string;
   description?: string;
   category: 'electrical' | 'thermal' | 'mechanical' | 'other';
+  isValidated?: boolean;
 }
 
 export interface ProductCreateInput {
@@ -678,6 +679,7 @@ const mockProducts: ProductWithParameters[] = [
       'Efficiency': '95%',
       'Operating Temperature': '-40°C to +125°C'
     },
+    characteristics: [],
     parameters: [
       { id: '1', name: 'Input Voltage', value: 17, unit: 'V', category: 'electrical' },
       { id: '2', name: 'Output Current', value: 3, unit: 'A', category: 'electrical' },
@@ -717,6 +719,7 @@ const mockProducts: ProductWithParameters[] = [
       'Coss': '200pF',
       'Crss': '50pF'
     },
+    characteristics: [],
     parameters: [
       { id: '1', name: 'Drain-Source Voltage', value: 90, unit: 'V', category: 'electrical' },
       { id: '2', name: 'Continuous Drain Current', value: 4, unit: 'A', category: 'electrical' },
@@ -754,6 +757,7 @@ const mockProducts: ProductWithParameters[] = [
       'Coss': '300pF',
       'Crss': '80pF'
     },
+    characteristics: [],
     parameters: [
       { id: '1', name: 'Drain-Source Voltage', value: 600, unit: 'V', category: 'electrical' },
       { id: '2', name: 'Continuous Drain Current', value: 6, unit: 'A', category: 'electrical' },
@@ -1448,6 +1452,48 @@ class ProductManagementService {
       console.error('Error deleting characteristic data:', error);
       throw new Error('Failed to delete characteristic data');
     }
+  }
+
+  /**
+   * Save extracted CSV data from Graph Extraction directly into the selected product.
+   * This is used for automatic persistence after extraction to make data available to SPICE generation.
+   */
+  async saveExtractedCSV(params: {
+    productId: string;
+    graphType: string; // e.g., 'output_characteristics', 'capacitance_characteristics', etc.
+    csvData: any[]; // array of objects parsed from CSV or constructed from extraction result
+    name?: string;
+    description?: string;
+  }): Promise<CharacteristicData> {
+    const { productId, graphType, csvData, name, description } = params;
+    const product = this.products.find(p => p.id === productId);
+    if (!product) throw new Error('Product not found');
+
+    // Initialize characteristics if missing
+    if (!product.characteristics) product.characteristics = [];
+
+    // Try update existing characteristic of the same type
+    const existing = product.characteristics.find(c => c.type === graphType);
+    if (existing) {
+      existing.csvData = Array.isArray(csvData) ? csvData : [];
+      existing.name = name || existing.name || graphType;
+      existing.description = description || existing.description || 'Extracted curve data';
+      product.updatedAt = new Date();
+      return existing;
+    }
+
+    // Otherwise create a new characteristic entry
+    const newCharacteristic: CharacteristicData = {
+      id: `char-${Date.now()}-${Math.random()}`,
+      type: graphType as any,
+      name: name || graphType,
+      description: description || 'Extracted curve data',
+      csvData: Array.isArray(csvData) ? csvData : [],
+      uploadedAt: new Date()
+    };
+    product.characteristics.push(newCharacteristic);
+    product.updatedAt = new Date();
+    return newCharacteristic;
   }
 }
 

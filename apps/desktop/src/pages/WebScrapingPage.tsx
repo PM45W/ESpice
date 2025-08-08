@@ -21,20 +21,14 @@ import {
   Zap,
   Shield
 } from 'lucide-react'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Progress } from '../components/ui/progress'
-import { Separator } from '../components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Button, Input, Card, CardContent, CardDescription, CardHeader, CardTitle, Badge, Progress, Separator, Tabs, TabsContent, TabsList, TabsTrigger } from '@espice/ui'
 import { 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/ui/select'
+} from '@espice/ui'
 import { 
   Dialog,
   DialogContent,
@@ -42,7 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../components/ui/dialog'
+} from '@espice/ui'
 import { 
   Table,
   TableBody,
@@ -50,15 +44,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../components/ui/table'
+} from '@espice/ui'
 import { 
   Alert,
   AlertDescription,
   AlertTitle,
-} from '../components/ui/alert'
-import { Checkbox } from '../components/ui/checkbox'
-import { Label } from '../components/ui/label'
-import { Textarea } from '../components/ui/textarea'
+} from '@espice/ui'
+import { Checkbox, Label, Textarea } from '@espice/ui'
 import webScrapingService, { 
   Manufacturer, 
   ProductCategory, 

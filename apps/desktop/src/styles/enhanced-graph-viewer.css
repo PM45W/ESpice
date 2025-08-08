@@ -7,12 +7,11 @@
   border: 1px solid hsl(var(--border));
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
 .enhanced-graph-viewer:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-color: hsl(var(--border));
 }
 
 .enhanced-graph-viewer .graph-svg {
@@ -42,13 +41,13 @@
 .enhanced-graph-viewer .graph-svg .curves circle {
   transition: r 0.2s ease, opacity 0.2s ease;
   cursor: pointer;
-  stroke: none; /* Remove any stroke/border */
+  stroke: none;
 }
 
 .enhanced-graph-viewer .graph-svg .curves circle:hover {
   r: 3;
   opacity: 1;
-  stroke: none; /* Ensure no stroke on hover */
+  stroke: none;
 }
 
 .enhanced-graph-viewer .graph-svg .legend {
@@ -87,11 +86,9 @@
   min-height: 400px;
   background: hsl(var(--muted) / 0.1);
   border: 2px dashed hsl(var(--border));
-  box-shadow: none;
 }
 
 .enhanced-graph-viewer.empty:hover {
-  box-shadow: none;
   border-color: hsl(var(--muted-foreground));
 }
 
@@ -183,7 +180,6 @@
   rx: 6;
   ry: 6;
   opacity: 0.95;
-  backdrop-filter: blur(8px);
 }
 
 .enhanced-graph-viewer .graph-svg .legend text {
@@ -266,14 +262,14 @@
 .enhanced-graph-viewer .graph-svg .curves circle {
   transition: all 0.2s ease;
   cursor: pointer;
-  stroke: none !important; /* Remove any stroke/border */
-  stroke-width: 0 !important; /* Ensure no stroke width */
+  stroke: none !important;
+  stroke-width: 0 !important;
 }
 
 .enhanced-graph-viewer .graph-svg .curves circle:hover {
-  r: 4;
-  stroke: none !important; /* Remove white stroke on hover */
-  stroke-width: 0 !important; /* Ensure no stroke width */
+  r: 3;
+  stroke: none !important;
+  stroke-width: 0 !important;
   opacity: 1;
 }
 
@@ -332,12 +328,6 @@
   stroke: inherit !important;
 }
 
-/* Professional shadow effects */
-.enhanced-graph-viewer .graph-svg filter feDropShadow {
-  flood-color: hsl(var(--foreground));
-  flood-opacity: 0.1;
-}
-
 /* Enhanced accessibility */
 .enhanced-graph-viewer .graph-svg .curves path:focus,
 .enhanced-graph-viewer .graph-svg .curves circle:focus {
@@ -348,7 +338,6 @@
 /* Print styles */
 @media print {
   .enhanced-graph-viewer {
-    box-shadow: none;
     border: 1px solid #000;
   }
   

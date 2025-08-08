@@ -440,9 +440,19 @@ class CurveExtractionApp:
         input_pane = ttk.PanedWindow(right_panel, orient='horizontal')
         input_pane.pack(fill=tk.BOTH, expand=True)
 
-        # ── left sub-panel: graph / axis / output / product -------------------------
-        self.left_input = ttk.Frame(input_pane)
-        input_pane.add(self.left_input, weight=3)
+        # ── left sub-panel: graph / axis / output / product (now scrollable + compact) ----
+        self.left_input_container = ttk.Frame(input_pane)
+        input_pane.add(self.left_input_container, weight=3)
+
+        # Make left side scrollable to ensure all controls are accessible on smaller screens
+        self.left_canvas = tk.Canvas(self.left_input_container, highlightthickness=0)
+        self.left_vscroll = ttk.Scrollbar(self.left_input_container, orient='vertical', command=self.left_canvas.yview)
+        self.left_canvas.configure(yscrollcommand=self.left_vscroll.set)
+        self.left_vscroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.left_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.left_input = ttk.Frame(self.left_canvas)
+        self.left_canvas.create_window((0, 0), window=self.left_input, anchor='nw')
+        self.left_input.bind("<Configure>", lambda e: self.left_canvas.configure(scrollregion=self.left_canvas.bbox("all")))
 
         #    A. Graph-type block -------------------------------------------------------
         gtype_grp = ttk.LabelFrame(self.left_input, text="Graph Type")
@@ -467,18 +477,22 @@ class CurveExtractionApp:
                   command=self.delete_graph_type).pack(anchor='w', padx=3, pady=3)
         self.graph_type_var.trace_add('write', self.update_save_button_state)
 
-        #    B. Axis range -------------------------------------------------------------
-        range_grp = ttk.LabelFrame(self.left_input, text="Axis Ranges")
-        range_grp.pack(fill=tk.X, padx=5, pady=5)
+        #    B & C. Axis range + Axis settings (side-by-side for compactness) ----------
+        axis_container = ttk.Frame(self.left_input)
+        axis_container.pack(fill=tk.X, padx=5, pady=5)
+        axis_container.columnconfigure(0, weight=1)
+        axis_container.columnconfigure(1, weight=1)
+
+        range_grp = ttk.LabelFrame(axis_container, text="Axis Ranges")
+        range_grp.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
         for txt, attr in (("X-Min", "x_min_entry"), ("X-Max", "x_max_entry"),
-                         ("Y-Min", "y_min_entry"), ("Y-Max", "y_max_entry")):
+                          ("Y-Min", "y_min_entry"), ("Y-Max", "y_max_entry")):
             ttk.Label(range_grp, text=txt).pack(anchor='w')
             setattr(self, attr, ttk.Entry(range_grp))
             getattr(self, attr).pack(fill=tk.X)
 
-        #    C. Axis labels & scales ---------------------------------------------------
-        axis_grp = ttk.LabelFrame(self.left_input, text="Axis Settings")
-        axis_grp.pack(fill=tk.X, padx=5, pady=5)
+        axis_grp = ttk.LabelFrame(axis_container, text="Axis Settings")
+        axis_grp.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
         ttk.Label(axis_grp, text="X-Axis Name").pack(anchor='w')
         self.x_axis_entry = ttk.Entry(axis_grp)
         self.x_axis_entry.pack(fill=tk.X)
@@ -500,9 +514,14 @@ class CurveExtractionApp:
             ttk.Radiobutton(axis_grp, text=v.capitalize(),
                            variable=self.y_scale_type, value=v).pack(anchor='w')
 
-        #    D. Scaling factors --------------------------------------------------------
-        scale_grp = ttk.LabelFrame(self.left_input, text="Scaling Factors")
-        scale_grp.pack(fill=tk.X, padx=5, pady=5)
+        #    D & E. Scaling factors + Output settings (side-by-side) -------------------
+        out_scale_container = ttk.Frame(self.left_input)
+        out_scale_container.pack(fill=tk.X, padx=5, pady=5)
+        out_scale_container.columnconfigure(0, weight=1)
+        out_scale_container.columnconfigure(1, weight=1)
+
+        scale_grp = ttk.LabelFrame(out_scale_container, text="Scaling Factors")
+        scale_grp.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
         ttk.Label(scale_grp, text="X-Scale").pack(anchor='w')
         self.x_scale_entry = ttk.Entry(scale_grp)
         self.x_scale_entry.pack(fill=tk.X)
@@ -510,9 +529,8 @@ class CurveExtractionApp:
         self.y_scale_entry = ttk.Entry(scale_grp)
         self.y_scale_entry.pack(fill=tk.X)
 
-        #    E. Output settings --------------------------------------------------------
-        out_grp = ttk.LabelFrame(self.left_input, text="Output Settings")
-        out_grp.pack(fill=tk.X, padx=5, pady=5)
+        out_grp = ttk.LabelFrame(out_scale_container, text="Output Settings")
+        out_grp.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
         ttk.Label(out_grp, text="Directory").pack(anchor='w')
         self.output_dir_entry = ttk.Entry(out_grp)
         self.output_dir_entry.pack(fill=tk.X)

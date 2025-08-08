@@ -1,0 +1,55 @@
+.SUBCKT ASM_HEMT D G S
+
+* Zero-volt voltage source to sense drain current
+VDsense D Dint 0
+
+* Source resistance (constant, based on NS0ACCS_S)
+RS Sint S {RSnom*(1+KRSC*(TEMP-25))} ; Source resistance
+
+* Drain resistance (non-linear, implemented via G-element)
+G_RD Dint D VALUE={I(VDsense) * RD0 * (1 + (V(Dint,Sint)/VSAT)**MEXP_ACCS_D)}
+
+* High-value resistor to prevent floating Gint
+Rgint Gint 0 1G
+
+* V_GS-dependent VDSAT (smoothed)
+BVDSAT VDSAT_node 0 V={MAX(0.3, 0.5 + 0.3*(V(G,S)-VOFF))}
+
+* Drain current (updated to account for non-linear R_D)
+GId Dint Sint VALUE={IF(V(G,S)>VOFF, KP*(V(G,S)-VOFF)**VSE*(1 + (LAMBDA0 + LAMBDA1*(V(G,S)-VOFF))*V(Dint,Sint))*TANH(V(Dint,Sint)/V(VDSAT_node)), 0)}
+
+* Capacitances
+B_CGD Gint Dint I={CGDO * exp(-KCAP_CGDO * (V(Dint,Sint)/VDSATCV)) * ddt(V(Gint,Dint))}
+B_CGS Gint Sint I={CGSO * exp(-KCAP_CGSO * (V(Gint,S) - VOFF)) * ddt(V(Gint,Sint))}
+B_CDS Dint Sint I={CDSO * exp(-KCAP_CDSO * (V(Dint,Sint)/VDSATCV)) * ddt(V(Dint,Sint))}
+
+* Thermal resistance and capacitance
+Rth Tnode 0 {RTH0}
+Cth Tnode 0 1u
+
+* Parameters
+.PARAM MEXP_ACCS_D=0.34    ; Exponent for drain resistance non-linearity [taken from Vgs=5V output char]
+.PARAM RD0=12m            ; Drain resistance at V_DS=0
+.PARAM VSAT=1         ; Saturation voltage for R_D non-linearity
+.PARAM VDSATCV=2.5        ; Voltage scale for C_GD
+.PARAM RSnom=12m          ; Source resistance
+.PARAM LAMBDA0=0.05    ; Channel length modulation
+.PARAM LAMBDA1=0.015
+.PARAM VSE=1.73          ; Velocity saturation exponent
+.PARAM CGDO=25.8p         
+.PARAM CGSO=90.344p
+.PARAM CDSO=72.905p
+.PARAM KRSC=6.0014e-3     ; Temp coeff (/°C)
+.PARAM KRDC=6.0014e-3     ; Temp coeff (/°C)
+.PARAM VOFF0=1.9            ; Threshold at 25 °C
+.PARAM KVTO=-1.2938e-3         ; Threshold tempco (V/°C)
+.PARAM VOFF={VOFF0 + KVTO*(TEMP - 25)}
+.PARAM RTH0=5.946e2       ; R_θJC (°C/W)
+.PARAM KPnom=10      ; Base transconductance
+.PARAM UTE=-0.35        ; Temperature coefficient for KP
+.PARAM KP={KPnom*((TEMP/25)**UTE)}
+.PARAM KCAP_CGSO=0.0226 ; Capacitance dependence factor (1/V), adjustable
+.PARAM KCAP_CGDO=0.0994 ; Capacitance dependence factor (1/V), adjustable
+.PARAM KCAP_CDSO=0.037 ; Capacitance dependence factor (1/V), adjustable
+
+.ENDS ASM_HEMT

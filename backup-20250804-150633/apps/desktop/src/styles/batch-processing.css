@@ -1,0 +1,545 @@
+/* Batch Processing Page Styles */
+.batch-processing-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.batch-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.batch-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+}
+
+.batch-header p {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0;
+}
+
+.batch-content {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.batch-active {
+  padding: 2rem;
+}
+
+.batch-info {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.batch-info h2 {
+  margin: 0 0 0.5rem 0;
+  color: #1a1a1a;
+  font-size: 1.5rem;
+}
+
+.batch-info p {
+  margin: 0 0 0.25rem 0;
+  color: #666;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.cancel-batch-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.cancel-batch-btn:hover {
+  background: #c82333;
+}
+
+.retry-failed-btn {
+  background: #ffc107;
+  color: #212529;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.retry-failed-btn:hover {
+  background: #e0a800;
+}
+
+.export-results-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.export-results-btn:hover {
+  background: #218838;
+}
+
+/* Batch Upload Zone */
+.batch-upload-zone {
+  padding: 2rem;
+}
+
+.upload-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.upload-header h2 {
+  font-size: 1.8rem;
+  color: #1a1a1a;
+  margin-bottom: 0.5rem;
+}
+
+.upload-header p {
+  color: #666;
+  margin: 0;
+}
+
+.batch-info-inputs {
+  margin-bottom: 2rem;
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.input-group input,
+.input-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.input-group input:focus,
+.input-group textarea:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.dropzone {
+  border: 3px dashed #e1e5e9;
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafbfc;
+}
+
+.dropzone:hover,
+.dropzone.active {
+  border-color: #007bff;
+  background: #f0f8ff;
+}
+
+.dropzone.has-files {
+  border-color: #28a745;
+  background: #f8fff9;
+}
+
+.dropzone-content {
+  color: #666;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.file-limit {
+  font-size: 0.9rem;
+  color: #999;
+  margin-top: 0.5rem;
+}
+
+.file-list {
+  margin-top: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.file-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.file-list-header h3 {
+  margin: 0;
+  color: #1a1a1a;
+}
+
+.clear-files-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.clear-files-btn:hover {
+  background: #c82333;
+}
+
+.files {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  border: 1px solid #e1e5e9;
+}
+
+.file-name {
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.file-size {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.remove-file-btn {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0.25rem;
+}
+
+.remove-file-btn:hover {
+  color: #c82333;
+}
+
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+  border: 1px solid #f5c6cb;
+}
+
+.upload-actions {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.create-batch-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.create-batch-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.create-batch-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+/* Batch Progress Tracker */
+.batch-progress-tracker {
+  margin-bottom: 2rem;
+}
+
+.overall-progress {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.progress-header h3 {
+  margin: 0;
+  color: #1a1a1a;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #007bff, #0056b3);
+  transition: width 0.3s ease;
+}
+
+.jobs-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.job-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  border: 1px solid #e1e5e9;
+}
+
+.job-status {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 1rem;
+}
+
+.job-status.pending {
+  background: #ffc107;
+}
+
+.job-status.processing {
+  background: #007bff;
+  animation: pulse 1.5s infinite;
+}
+
+.job-status.completed {
+  background: #28a745;
+}
+
+.job-status.failed {
+  background: #dc3545;
+}
+
+.job-status.cancelled {
+  background: #6c757d;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.job-info {
+  flex: 1;
+}
+
+.job-name {
+  font-weight: 500;
+  color: #1a1a1a;
+  margin-bottom: 0.25rem;
+}
+
+.job-progress {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Batch Results Summary */
+.batch-results-summary {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.results-header h3 {
+  margin: 0;
+  color: #1a1a1a;
+}
+
+.results-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e1e5e9;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.completed-jobs {
+  color: #28a745;
+}
+
+.failed-jobs {
+  color: #dc3545;
+}
+
+.total-jobs {
+  color: #007bff;
+}
+
+/* Batch Queue Manager */
+.batch-queue-manager {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.queue-header h3 {
+  margin: 0;
+  color: #1a1a1a;
+}
+
+.queue-controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.queue-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.queue-btn.primary {
+  background: #007bff;
+  color: white;
+}
+
+.queue-btn.primary:hover {
+  background: #0056b3;
+}
+
+.queue-btn.secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.queue-btn.secondary:hover {
+  background: #545b62;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .batch-processing-page {
+    padding: 1rem;
+  }
+  
+  .batch-header h1 {
+    font-size: 2rem;
+  }
+  
+  .batch-actions {
+    flex-direction: column;
+  }
+  
+  .batch-actions button {
+    width: 100%;
+  }
+  
+  .results-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .queue-controls {
+    flex-direction: column;
+  }
+} 

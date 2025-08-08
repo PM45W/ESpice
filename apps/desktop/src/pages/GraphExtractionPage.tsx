@@ -1,79 +1,309 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { curveExtractionService } from '../services/curveExtractionService';
 import { graphQueueService, QueueJob, QueueConfig } from '../services/graphQueueService';
+import customGraphTypeService, { CustomGraphType } from '../services/customGraphTypeService';
 import { DetectedColor, GraphConfig, GraphPreset, CurveExtractionResult } from '../types';
 import EnhancedGraphViewer from '../components/EnhancedGraphViewer';
+import CustomGraphTypeModal from '../components/CustomGraphTypeModal';
+import { Settings, Plus } from 'lucide-react';
+import { Button } from '@espice/ui';
 import '../styles/graph-extraction.css';
+import productManagementService from '../services/productManagementService';
 
 // Graph type presets with legacy algorithm support
-const GRAPH_PRESETS = {
-  output: {
-    graph_type: 'output',
+const GRAPH_PRESETS: { [key: string]: GraphPreset } = {
+  output_characteristics: {
+    graph_type: 'output_characteristics',
     name: 'Output Characteristics',
-    x_axis: 'Vds',
-    y_axis: 'Id',
-    third_col: 'Vgs',
+    x_axis: 'VDS - Drain-to-Source Voltage (V)',
+    y_axis: 'ID - Drain Current (A)',
+    third_col: 'VGS',
     x_min: 0,
-    x_max: 3,
+    x_max: 3.0,
     y_min: 0,
-    y_max: 2.75,
+    y_max: 500,
     x_scale: 1,
-    y_scale: 10,
+    y_scale: 1,
     x_scale_type: 'linear',
     y_scale_type: 'linear',
-    color_reps: { red: '5', blue: '2', green: '4', yellow: '3' },
+    color_reps: {
+      red: 'VGS = 5V',
+      green: 'VGS = 4V',
+      yellow: 'VGS = 3V',
+      blue: 'VGS = 2V'
+    },
     output_filename: 'output_characteristics'
   },
-  transfer: {
-    graph_type: 'transfer',
-    name: 'Transfer Characteristics',
-    x_axis: 'Vgs',
-    y_axis: 'Id',
-    third_col: 'Temperature',
+  output_characteristics_log: {
+    graph_type: 'output_characteristics_log',
+    name: 'Output Characteristics (Log Scale)',
+    x_axis: 'VDS - Drain-to-Source Voltage (V)',
+    y_axis: 'ID - Drain Current (A)',
+    third_col: 'VGS',
     x_min: 0,
-    x_max: 5,
-    y_min: 0,
-    y_max: 2.75,
+    x_max: 3.0,
+    y_min: 0.1,
+    y_max: 500,
     x_scale: 1,
-    y_scale: 10,
+    y_scale: 1,
+    x_scale_type: 'linear',
+    y_scale_type: 'log',
+    color_reps: {
+      red: 'VGS = 5V',
+      green: 'VGS = 4V',
+      yellow: 'VGS = 3V',
+      blue: 'VGS = 2V'
+    },
+    output_filename: 'output_characteristics_log'
+  },
+  transfer_characteristics: {
+    graph_type: 'transfer_characteristics',
+    name: 'Transfer Characteristics',
+    x_axis: 'VGS - Gate-to-Source Voltage (V)',
+    y_axis: 'ID - Drain Current (A)',
+    third_col: 'Temperature',
+    x_min: 0.5,
+    x_max: 5.0,
+    y_min: 0,
+    y_max: 500,
+    x_scale: 1,
+    y_scale: 1,
     x_scale_type: 'linear',
     y_scale_type: 'linear',
-    color_reps: { red: '25', blue: '125' },
+    color_reps: {
+      blue: 'T = 25°C',
+      red: 'T = 125°C'
+    },
     output_filename: 'transfer_characteristics'
   },
-  capacitance: {
-    graph_type: 'capacitance',
+  transfer_characteristics_log: {
+    graph_type: 'transfer_characteristics_log',
+    name: 'Transfer Characteristics (Log Scale)',
+    x_axis: 'VGS - Gate-to-Source Voltage (V)',
+    y_axis: 'ID - Drain Current (A)',
+    third_col: 'Temperature',
+    x_min: 0.5,
+    x_max: 5.0,
+    y_min: 0.1,
+    y_max: 500,
+    x_scale: 1,
+    y_scale: 1,
+    x_scale_type: 'linear',
+    y_scale_type: 'log',
+    color_reps: {
+      blue: 'T = 25°C',
+      red: 'T = 125°C'
+    },
+    output_filename: 'transfer_characteristics_log'
+  },
+  capacitance_characteristics: {
+    graph_type: 'capacitance_characteristics',
     name: 'Capacitance Characteristics',
-    x_axis: 'vds',
-    y_axis: 'c',
-    third_col: 'type',
+    x_axis: 'VDS - Drain-to-Source Voltage (V)',
+    y_axis: 'Capacitance (pF)',
+    third_col: 'Type',
     x_min: 0,
     x_max: 15,
     y_min: 0,
-    y_max: 10,
+    y_max: 120,
     x_scale: 1,
-    y_scale: 10,
+    y_scale: 1,
     x_scale_type: 'linear',
     y_scale_type: 'linear',
-    color_reps: { red: 'Coss', green: 'Ciss', yellow: 'Crss' },
+    color_reps: { 
+      red: 'COSS = CGD + CSD', 
+      yellow: 'CISS = CGD + CGS', 
+      green: 'CRSS = CGD'
+    },
     output_filename: 'capacitance_characteristics'
   },
-  resistance: {
-    graph_type: 'resistance',
-    name: 'Rds vs Vgs',
-    x_axis: 'Vgs',
-    y_axis: 'Rds',
-    third_col: 'Temp',
+  capacitance_characteristics_log: {
+    graph_type: 'capacitance_characteristics_log',
+    name: 'Capacitance Characteristics (Log Scale)',
+    x_axis: 'VDS - Drain-to-Source Voltage (V)',
+    y_axis: 'Capacitance (pF)',
+    third_col: 'Type',
     x_min: 0,
-    x_max: 5,
-    y_min: 0,
-    y_max: 8,
+    x_max: 15,
+    y_min: 10,
+    y_max: 1000,
     x_scale: 1,
-    y_scale: 10,
+    y_scale: 1,
+    x_scale_type: 'linear',
+    y_scale_type: 'log',
+    color_reps: { 
+      red: 'COSS = CGD + CSD', 
+      yellow: 'CISS = CGD + CGS', 
+      green: 'CRSS = CGD'
+    },
+    output_filename: 'capacitance_characteristics_log'
+  },
+  on_resistance_characteristics: {
+    graph_type: 'on_resistance_characteristics',
+    name: 'On-Resistance Characteristics',
+    x_axis: 'VGS - Gate-to-Source Voltage (V)',
+    y_axis: 'RDS(on) - Drain-to-Source Resistance (mΩ)',
+    third_col: 'ID',
+    x_min: 2.5,
+    x_max: 5.0,
+    y_min: 0,
+    y_max: 5,
+    x_scale: 1,
+    y_scale: 1,
     x_scale_type: 'linear',
     y_scale_type: 'linear',
-    color_reps: { red: '25', blue: '125' },
-    output_filename: 'Rds_on_vs_Vgs'
+    color_reps: { 
+      blue: 'ID = 20A',
+      green: 'ID = 40A',
+      yellow: 'ID = 60A',
+      red: 'ID = 80A'
+    },
+    output_filename: 'on_resistance_characteristics'
+  },
+  on_resistance_temperature: {
+    graph_type: 'on_resistance_temperature',
+    name: 'On-Resistance vs Temperature',
+    x_axis: 'VGS - Gate-to-Source Voltage (V)',
+    y_axis: 'RDS(on) - Drain-to-Source Resistance (mΩ)',
+    third_col: 'Temperature',
+    x_min: 2.5,
+    x_max: 5.0,
+    y_min: 0,
+    y_max: 5,
+    x_scale: 1,
+    y_scale: 1,
+    x_scale_type: 'linear',
+    y_scale_type: 'linear',
+    color_reps: { 
+      blue: 'T = 25°C',
+      red: 'T = 125°C'
+    },
+    output_filename: 'on_resistance_temperature'
+  },
+  gate_charge_characteristics: {
+    graph_type: 'gate_charge_characteristics',
+    name: 'Gate Charge Characteristics',
+    x_axis: 'VGS - Gate-to-Source Voltage (V)',
+    y_axis: 'QG - Gate Charge (nC)',
+    third_col: 'VDS',
+    x_min: 0,
+    x_max: 6,
+    y_min: 0,
+    y_max: 1000,
+    x_scale: 1,
+    y_scale: 1,
+    x_scale_type: 'linear',
+    y_scale_type: 'linear',
+    color_reps: { 
+      blue: 'VDS = 6V',
+      red: 'VDS = 12V',
+      green: 'VDS = 3V',
+      yellow: 'VDS = 9V'
+    },
+    output_filename: 'gate_charge_characteristics'
+  },
+  switching_characteristics: {
+    graph_type: 'switching_characteristics',
+    name: 'Switching Characteristics',
+    x_axis: 'Time (ns)',
+    y_axis: 'V/I (V/A)',
+    third_col: 'Type',
+    x_min: 0,
+    x_max: 100,
+    y_min: 0,
+    y_max: 100,
+    x_scale: 1,
+    y_scale: 1,
+    x_scale_type: 'linear',
+    y_scale_type: 'linear',
+    color_reps: { 
+      red: 'VDS',
+      blue: 'ID',
+      green: 'VGS',
+      yellow: 'IG'
+    },
+    output_filename: 'switching_characteristics'
+  },
+  thermal_characteristics: {
+    graph_type: 'thermal_characteristics',
+    name: 'Normalized On-State Resistance vs Temperature',
+    x_axis: 'Tj - Junction Temperature (°C)',
+    y_axis: 'Normalized On-State Resistance RDS(on)',
+    third_col: 'Conditions',
+    x_min: 0,
+    x_max: 150,
+    y_min: 0.8,
+    y_max: 2.0,
+    x_scale: 1,
+    y_scale: 1,
+    x_scale_type: 'linear',
+    y_scale_type: 'linear',
+    color_reps: { 
+      blue: 'ID = 40A, VGS = 5V'
+    },
+    output_filename: 'thermal_characteristics'
+  },
+  safe_operating_area: {
+    graph_type: 'safe_operating_area',
+    name: 'Safe Operating Area',
+    x_axis: 'VDS - Drain-to-Source Voltage (V)',
+    y_axis: 'ID - Drain Current (A)',
+    third_col: 'Type',
+    x_min: 0,
+    x_max: 100,
+    y_min: 0,
+    y_max: 1000,
+    x_scale: 1,
+    y_scale: 1,
+    x_scale_type: 'log',
+    y_scale_type: 'log',
+    color_reps: { 
+      red: 'DC',
+      blue: 'Pulse',
+      green: 'Single Pulse',
+      yellow: 'Repetitive Pulse'
+    },
+    output_filename: 'safe_operating_area'
+  },
+  body_diode_characteristics: {
+    graph_type: 'body_diode_characteristics',
+    name: 'Body Diode Characteristics',
+    x_axis: 'VSD - Source-to-Drain Voltage (V)',
+    y_axis: 'ISD - Source-to-Drain Current (A)',
+    third_col: 'Temperature',
+    x_min: 0,
+    x_max: 5.0,
+    y_min: 0,
+    y_max: 500,
+    x_scale: 1,
+    y_scale: 1,
+    x_scale_type: 'linear',
+    y_scale_type: 'linear',
+    color_reps: { 
+      blue: 'T = 25°C',
+      red: 'T = 125°C'
+    },
+    output_filename: 'body_diode_characteristics'
+  },
+  reverse_drain_source_characteristics: {
+    graph_type: 'reverse_drain_source_characteristics',
+    name: 'Reverse Drain-Source Characteristics',
+    x_axis: 'VSD - Source-to-Drain Voltage (V)',
+    y_axis: 'ISD - Source-to-Drain Current (A)',
+    third_col: 'Temperature',
+    x_min: 0,
+    x_max: 5.0,
+    y_min: 0,
+    y_max: 500,
+    x_scale: 1,
+    y_scale: 1,
+    x_scale_type: 'linear',
+    y_scale_type: 'linear',
+    color_reps: { 
+      blue: 'T = 25°C',
+      red: 'T = 125°C'
+    },
+    output_filename: 'reverse_drain_source_characteristics'
   }
 };
 
@@ -98,10 +328,16 @@ const convertPresetToConfig = (preset: GraphPreset): GraphConfig => ({
   y_scale: preset.y_scale,
   x_scale_type: preset.x_scale_type,
   y_scale_type: preset.y_scale_type,
-  min_size: 300, // Changed from 150 to 300
-  detection_sensitivity: 10, // Changed to high sensitivity (strict)
-  color_tolerance: 10, // Changed to strict color tolerance
-  smoothing_factor: 3,
+  // Optimized defaults for better performance:
+  min_size: 1000,
+  color_tolerance: 0,
+  // Default to optimized mode for better results
+  mode: 'optimized',
+  use_plot_area: false,
+  use_annotation_mask: false,
+  use_edge_guided: false,
+  use_adaptive_binning: false,
+  use_auto_color: false,
   color_reps: preset.color_reps
 });
 
@@ -111,21 +347,25 @@ export default function GraphExtractionPage({
   setServiceError, 
   setOnServiceRetry 
 }: GraphExtractionPageProps) {
+  const [customGraphTypes, setCustomGraphTypes] = useState<CustomGraphType[]>([]);
+  const [showCustomGraphTypeModal, setShowCustomGraphTypeModal] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageData, setImageData] = useState<Uint8Array | null>(null);
   const [detectedColors, setDetectedColors] = useState<DetectedColor[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [config, setConfig] = useState<GraphConfig>(convertPresetToConfig(GRAPH_PRESETS.output));
+  const [config, setConfig] = useState<GraphConfig>(convertPresetToConfig(GRAPH_PRESETS.output_characteristics));
   const [result, setResult] = useState<CurveExtractionResult | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState<string>('');
   const [serviceStatus, setLocalServiceStatus] = useState<'checking' | 'available' | 'unavailable'>('checking');
-  const [activeTab, setActiveTab] = useState<'standard' | 'llm' | 'queue'>('standard'); // Added queue tab
+  const [activeTab, setActiveTab] = useState<'standard' | 'llm' | 'queue'>('standard');
   const [legacyResult, setLegacyResult] = useState<CurveExtractionResult | null>(null);
   const [llmResult, setLlmResult] = useState<CurveExtractionResult | null>(null);
   const [llmPrompt, setLlmPrompt] = useState<string>('');
   const [llmProcessing, setLlmProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Read optional productId query param to support post-extraction auto-save
+  const [targetProductId, setTargetProductId] = useState<string | null>(null);
 
   // Queue Management State
   const [queueConfig, setQueueConfig] = useState<QueueConfig>({
@@ -351,19 +591,22 @@ export default function GraphExtractionPage({
   }, []);
 
   const handleExtract = useCallback(async () => {
-    if (!imageData || selectedColors.length === 0) return;
+    if (!imageData) return;
 
     try {
       setExtracting(true);
       setError('');
       
       let extractionResult: CurveExtractionResult;
+      const colorsToUse = selectedColors.length > 0
+        ? selectedColors
+        : ['red','blue','green','yellow','cyan','magenta','orange','purple'];
       
       if (activeTab === 'llm') {
         // Use LLM-assisted extraction
         extractionResult = await curveExtractionService.extractCurvesLLM(
           imageData,
-          selectedColors,
+          colorsToUse,
           config,
           llmPrompt
         );
@@ -372,12 +615,41 @@ export default function GraphExtractionPage({
         // Use standard extraction (which is legacy algorithm)
         extractionResult = await curveExtractionService.extractCurves(
           imageData,
-          selectedColors,
+          colorsToUse,
           config
         );
       }
       
       setResult(extractionResult);
+
+      // Auto-save CSV to product if productId present
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const productId = params.get('productId');
+        setTargetProductId(productId);
+        if (productId) {
+          // Build array-of-objects rows for CSV persistence
+          const rows: any[] = [];
+          extractionResult.curves.forEach((curve) => {
+            curve.points.forEach((p) => {
+              rows.push({
+                [config.x_axis_name]: p.x,
+                [config.y_axis_name]: p.y,
+                Curve: curve.name
+              });
+            });
+          });
+          await productManagementService.saveExtractedCSV({
+            productId,
+            graphType: config.graph_type,
+            csvData: rows,
+            name: GRAPH_PRESETS[config.graph_type as keyof typeof GRAPH_PRESETS]?.name || config.graph_type,
+            description: `Auto-saved from Graph Extraction (${activeTab})`
+          });
+        }
+      } catch (e) {
+        console.warn('Auto-save of extracted CSV failed:', e);
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Extraction failed');
     } finally {
@@ -481,7 +753,37 @@ export default function GraphExtractionPage({
   useEffect(() => {
     checkServiceStatus();
     setOnServiceRetry(checkServiceStatus);
+    loadCustomGraphTypes();
   }, []);
+
+  const loadCustomGraphTypes = async () => {
+    try {
+      const types = await customGraphTypeService.getAllCustomGraphTypes();
+      setCustomGraphTypes(types);
+    } catch (error) {
+      console.error('Failed to load custom graph types:', error);
+    }
+  };
+
+  const handleSaveCustomGraphType = async (graphType: CustomGraphType) => {
+    try {
+      await customGraphTypeService.saveCustomGraphType(graphType);
+      await loadCustomGraphTypes();
+    } catch (error) {
+      console.error('Failed to save custom graph type:', error);
+      alert('Failed to save custom graph type');
+    }
+  };
+
+  const handleDeleteCustomGraphType = async (id: string) => {
+    try {
+      await customGraphTypeService.deleteCustomGraphType(id);
+      await loadCustomGraphTypes();
+    } catch (error) {
+      console.error('Failed to delete custom graph type:', error);
+      alert('Failed to delete custom graph type');
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'queue') {
@@ -528,8 +830,10 @@ export default function GraphExtractionPage({
 
       // Detect colors
       const colors = await curveExtractionService.detectColors(uint8Array);
-      setDetectedColors(colors);
-      setSelectedColors(colors.map(c => c.name));
+      // Deduplicate by name (base color) to avoid 'red' & 'red2'
+      const uniqueByName = Array.from(new Map(colors.map(c => [c.name, c])).values());
+      setDetectedColors(uniqueByName);
+      setSelectedColors(uniqueByName.map(c => c.name));
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to load image');
     }
@@ -537,6 +841,28 @@ export default function GraphExtractionPage({
 
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // If graph type is changed, update the entire configuration with the new preset
+    if (name === 'graph_type') {
+      // Check if it's a custom graph type
+      const customType = customGraphTypes.find(type => type.id === value);
+      if (customType) {
+        const customPreset = customGraphTypeService.convertToGraphPreset(customType);
+        setConfig(convertPresetToConfig(customPreset));
+        curveExtractionService.setGraphPreset(value);
+        return;
+      }
+      
+      // Check if it's a built-in preset
+      const selectedPreset = GRAPH_PRESETS[value as keyof typeof GRAPH_PRESETS];
+      if (selectedPreset) {
+        setConfig(convertPresetToConfig(selectedPreset));
+        curveExtractionService.setGraphPreset(value);
+        return;
+      }
+    }
+    
+    // For other fields, update only the specific field
     setConfig(prev => ({
       ...prev,
       [name]: name.includes('min') || name.includes('max') || name.includes('scale') ? parseFloat(value) : value
@@ -544,15 +870,18 @@ export default function GraphExtractionPage({
   };
 
   const handleLLMExtract = async () => {
-    if (!imageData || selectedColors.length === 0) return;
+    if (!imageData) return;
 
     try {
       setLlmProcessing(true);
       setError('');
       
+      const colorsToUse = selectedColors.length > 0
+        ? selectedColors
+        : ['red','blue','green','yellow','cyan','magenta','orange','purple'];
       const extractionResult = await curveExtractionService.extractCurvesLLM(
         imageData,
-        selectedColors,
+        colorsToUse,
         config,
         llmPrompt
       );
@@ -579,6 +908,21 @@ export default function GraphExtractionPage({
       fileInputRef.current.value = '';
     }
   };
+
+  const openResultView = useCallback(() => {
+    try {
+      const payload = {
+        imagePreview,
+        result: getCurrentResult(),
+        config,
+      };
+      localStorage.setItem('graphExtractionResult', JSON.stringify(payload));
+      window.location.href = '/graph-extraction/result';
+    } catch (e) {
+      console.error('Failed to open result view', e);
+      setError('Failed to open result view');
+    }
+  }, [imagePreview, config]);
 
   return (
     <div className="graph-extraction-page">
@@ -628,8 +972,8 @@ export default function GraphExtractionPage({
                       curves={getCurrentResult()!.curves}
                       config={config}
                       title=""
-                      width={500}
-                      height={500}
+                      width={583}
+                      height={471}
                       showGrid={true}
                       showLegend={true}
                       showAxisLabels={true}
@@ -641,6 +985,11 @@ export default function GraphExtractionPage({
                     </div>
                   )}
                 </div>
+                {getCurrentResult() && (
+                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button size="sm" variant="secondary" onClick={openResultView}>Open Result View</Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -648,28 +997,7 @@ export default function GraphExtractionPage({
           <div className="config-panel">
             <div className="config-section card">
               <div className="config-content">
-                {/* Tab Navigation */}
-                <div className="extraction-tabs">
-                  <button 
-                    className={`tab-button ${activeTab === 'standard' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('standard')}
-                  >
-                    Standard
-                  </button>
-                  <button 
-                    className={`tab-button ${activeTab === 'llm' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('llm')}
-                  >
-                    LLM Assisted
-                    <span className="beta-badge">Beta</span>
-                  </button>
-                  <button 
-                    className={`tab-button ${activeTab === 'queue' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('queue')}
-                  >
-                    Queue Management
-                  </button>
-                </div>
+                {/* Tabs hidden per request; default to Standard mode */}
 
                 {/* LLM Prompt Section */}
                 {activeTab === 'llm' && (
@@ -934,18 +1262,40 @@ export default function GraphExtractionPage({
 
                 <div className="form-group">
                   <label>Graph Type</label>
-                  <select
-                    name="graph_type"
-                    value={config.graph_type}
-                    onChange={handleConfigChange}
-                    className="form-select"
-                  >
-                    {Object.entries(GRAPH_PRESETS).map(([key, preset]) => (
-                      <option key={key} value={key}>
-                        {preset.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="graph-type-container">
+                    <select
+                      name="graph_type"
+                      value={config.graph_type}
+                      onChange={handleConfigChange}
+                      className="form-select"
+                    >
+                      <optgroup label="Built-in Graph Types">
+                        {Object.entries(GRAPH_PRESETS).map(([key, preset]) => (
+                          <option key={key} value={key}>
+                            {preset.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                      {customGraphTypes.length > 0 && (
+                        <optgroup label="Custom Graph Types">
+                          {customGraphTypes.map((customType) => (
+                            <option key={customType.id} value={customType.id}>
+                              {customType.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                    <Button
+                      onClick={() => setShowCustomGraphTypeModal(true)}
+                      variant="outline"
+                      size="sm"
+                      className="custom-graph-type-btn"
+                      title="Manage Custom Graph Types"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="form-row">
@@ -1069,31 +1419,15 @@ export default function GraphExtractionPage({
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label>Detection Sensitivity</label>
-                    <input
-                      type="range"
-                      name="detection_sensitivity"
-                      min="1"
-                      max="10"
-                      value={config.detection_sensitivity || 5}
-                      onChange={handleConfigChange}
-                      className="form-range"
-                    />
-                    <div className="range-labels">
-                      <span>Low (1)</span>
-                      <span>High (10)</span>
-                    </div>
-                  </div>
-                  <div className="form-group">
                     <label>Min Pixel Count</label>
                     <input
                       type="number"
                       name="min_size"
-                      value={config.min_size || 100}
+                      value={config.min_size || 1000}
                       onChange={handleConfigChange}
                       className="form-input"
-                      min="10"
-                      max="10000"
+                      min="50"
+                      max="20000"
                     />
                   </div>
                 </div>
@@ -1104,57 +1438,125 @@ export default function GraphExtractionPage({
                     <input
                       type="range"
                       name="color_tolerance"
-                      min="1"
+                      min="0"
                       max="50"
-                      value={config.color_tolerance || 20}
+                      value={config.color_tolerance || 0}
                       onChange={handleConfigChange}
                       className="form-range"
                     />
                     <div className="range-labels">
-                      <span>Strict (1)</span>
+                      <span>Strict (0)</span>
                       <span>Loose (50)</span>
                     </div>
                   </div>
+                  
+                </div>
+
+                <div className="form-row">
                   <div className="form-group">
-                    <label>Curve Smoothing</label>
-                    <input
-                      type="range"
-                      name="smoothing_factor"
-                      min="0"
-                      max="10"
-                      value={config.smoothing_factor || 3}
+                    <label>Extraction Mode</label>
+                    <select
+                      name="mode"
+                      value={config.mode || 'optimized'}
                       onChange={handleConfigChange}
-                      className="form-range"
-                    />
-                    <div className="range-labels">
-                      <span>None (0)</span>
-                      <span>High (10)</span>
-                    </div>
+                      className="form-select"
+                    >
+                      <option value="optimized">Optimized (Recommended)</option>
+                      <option value="legacy">Legacy Algorithm</option>
+                      <option value="enhanced">Enhanced Features</option>
+                      <option value="auto">Auto Selection</option>
+                    </select>
+                    <small className="form-help">
+                      Optimized: Best balance of speed and accuracy. Legacy: Original algorithm. Enhanced: Advanced features.
+                    </small>
+                  </div>
+                </div>
+
+                {/* Enhanced Feature Flags (optional) */}
+                <div className="form-group enhanced-options">
+                  <div className="enhanced-header">
+                    <label>Enhanced Options (optional)</label>
+                    <small className="enhanced-hint">Enable only as needed. Start with Plot Area, then try Edge-guided.</small>
+                  </div>
+                  <div className="flag-grid">
+                    <label className="flag-item">
+                      <input
+                        type="checkbox"
+                        checked={!!config.use_plot_area}
+                        onChange={(e) => setConfig(prev => ({ ...prev, use_plot_area: e.target.checked }))}
+                      />
+                      <div className="flag-text">
+                        <span className="flag-title">Use Plot Area Detection</span>
+                        <span className="flag-help">Detects inner axes region to reduce noise</span>
+                      </div>
+                    </label>
+                    <label className="flag-item">
+                      <input
+                        type="checkbox"
+                        checked={!!config.use_edge_guided}
+                        onChange={(e) => setConfig(prev => ({ ...prev, use_edge_guided: e.target.checked }))}
+                      />
+                      <div className="flag-text">
+                        <span className="flag-title">Edge-guided Denoising</span>
+                        <span className="flag-help">Keeps pixels aligned to edges; good for thin strokes</span>
+                      </div>
+                    </label>
+                    <label className="flag-item">
+                      <input
+                        type="checkbox"
+                        checked={!!config.use_annotation_mask}
+                        onChange={(e) => setConfig(prev => ({ ...prev, use_annotation_mask: e.target.checked }))}
+                      />
+                      <div className="flag-text">
+                        <span className="flag-title">Mask Legends/Ticks</span>
+                        <span className="flag-help">Removes legend boxes and tick labels; may hide near-axis curves</span>
+                      </div>
+                    </label>
+                    <label className="flag-item">
+                      <input
+                        type="checkbox"
+                        checked={!!config.use_adaptive_binning}
+                        onChange={(e) => setConfig(prev => ({ ...prev, use_adaptive_binning: e.target.checked }))}
+                      />
+                      <div className="flag-text">
+                        <span className="flag-title">Adaptive Binning</span>
+                        <span className="flag-help">Dynamic bin size based on X-range</span>
+                      </div>
+                    </label>
+                    <label className="flag-item">
+                      <input
+                        type="checkbox"
+                        checked={!!config.use_auto_color}
+                        onChange={(e) => setConfig(prev => ({ ...prev, use_auto_color: e.target.checked }))}
+                      />
+                      <div className="flag-text">
+                        <span className="flag-title">Auto-Color Fallback</span>
+                        <span className="flag-help">Cluster colors automatically if selected colors fail</span>
+                      </div>
+                    </label>
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label>Selected Colors</label>
+                  <label>Detected Colors</label>
                   <div className="color-selection">
                     {detectedColors.map((color) => (
-                      <label key={color.name} className="color-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={selectedColors.includes(color.name)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedColors([...selectedColors, color.name]);
-                            } else {
-                              setSelectedColors(selectedColors.filter(c => c !== color.name));
-                            }
-                          }}
-                        />
-                        <span 
-                          className="color-swatch" 
-                          style={{ backgroundColor: color.color }}
-                        />
-                        {color.name}
-                      </label>
+                      <button
+                        key={color.name}
+                        type="button"
+                        className="color-checkbox"
+                        onClick={() => {
+                          setSelectedColors(prev => prev.includes(color.name) ? prev.filter(c => c !== color.name) : [...prev, color.name]);
+                        }}
+                        aria-pressed={selectedColors.includes(color.name)}
+                        title={color.display_name || color.name}
+                        style={{
+                          outline: selectedColors.includes(color.name) ? '2px solid hsl(var(--primary))' : 'none'
+                        }}
+                      >
+                        <span className="color-swatch" style={{ backgroundColor: color.color }} />
+                        <span>{color.display_name || color.name}</span>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -1165,8 +1567,9 @@ export default function GraphExtractionPage({
                       onClick={handleLLMExtract}
                       className="btn btn-primary extract-btn"
                       disabled={llmProcessing || !imageData}
+                      title="Extract with AI"
                     >
-                      {llmProcessing ? 'AI Processing...' : 'Extract with AI'}
+                      {llmProcessing ? '⏳' : '🤖'}
                     </button>
                   ) : activeTab === 'queue' ? (
                     <div className="queue-actions">
@@ -1174,15 +1577,17 @@ export default function GraphExtractionPage({
                         onClick={loadQueueJobs}
                         className="btn btn-secondary"
                         disabled={queueLoading}
+                        title="Refresh Queue"
                       >
-                        {queueLoading ? 'Loading...' : '🔄 Refresh Queue'}
+                        {queueLoading ? '⏳' : '🔄'}
                       </button>
                       <button 
                         onClick={selectAllJobs}
                         className="btn btn-secondary"
                         disabled={queueJobs.length === 0}
+                        title="Select All"
                       >
-                        📋 Select All
+                        📋
                       </button>
                     </div>
                   ) : (
@@ -1191,7 +1596,7 @@ export default function GraphExtractionPage({
                       className="btn btn-primary extract-btn"
                       disabled={extracting || !imageData}
                     >
-                      {extracting ? 'Processing...' : 'Extract Graph'}
+                      {extracting ? '⏳' : '📊'}
                     </button>
                   )}
                 </div>
@@ -1254,6 +1659,15 @@ export default function GraphExtractionPage({
             )}
           </div>
         )}
+
+        {/* Custom Graph Type Modal */}
+        <CustomGraphTypeModal
+          isOpen={showCustomGraphTypeModal}
+          onClose={() => setShowCustomGraphTypeModal(false)}
+          onSave={handleSaveCustomGraphType}
+          onDelete={handleDeleteCustomGraphType}
+          existingTypes={customGraphTypes}
+        />
       </div>
     </div>
   );

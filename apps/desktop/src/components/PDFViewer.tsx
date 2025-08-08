@@ -1,12 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { ZoomIn, ZoomOut, RotateCw, Download, Fullscreen, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Input } from './ui/input';
-import { Badge } from './ui/badge';
-import { Progress } from './ui/progress';
-import { Alert, AlertDescription } from './ui/alert';
+import { 
+  Button, 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  Input, 
+  Badge, 
+  Progress, 
+  Alert, 
+  AlertDescription 
+} from '@espice/ui';
 
 // Set up PDF.js worker - use the worker from the installed package
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(

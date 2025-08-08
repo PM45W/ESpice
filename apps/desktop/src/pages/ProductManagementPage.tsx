@@ -30,31 +30,32 @@ import {
   ArrowLeft,
   Grid3X3,
   FileText as FileTextIcon,
-  BarChart2
+  BarChart2,
+  X
 } from 'lucide-react';
 
 // Service imports
 import productManagementService, { ProductWithParameters, ProductCreateInput } from '../services/productManagementService';
 import { productQueueIntegrationService, GraphImageRecord, GraphExtractionJobRecord, GraphExtractionResultRecord } from '../services/productQueueIntegrationService';
 import { spiceExtractionIntegrationService, SPICEExtractionRequest, SPICEExtractionResult, ModelVersion } from '../services/spiceExtractionIntegrationService';
-import CSVImportModal from '../components/CSVImportModal';
-import DatasheetUploadModal from '../components/DatasheetUploadModal';
-import ProductDataUploadModal, { CharacteristicData } from '../components/ProductDataUploadModal';
+import { CharacteristicData } from '../components/ProductDataUploadModal';
 import type { DatasheetExtractionResult } from '../services/datasheetImageExtractionService';
 import EnhancedGraphExtractionService from '../services/enhancedGraphExtractionService';
 import EnhancedBatchProcessingService from '../services/enhancedBatchProcessingService';
-import MultiImageUpload from '../components/MultiImageUpload';
 import GraphImageGallery from '../components/GraphImageGallery';
 import GraphImageService, { GraphImage } from '../services/graphImageService';
+import EPCDownloadModal from '../components/EPCDownloadModal';
+import epcProductDownloadService, { EPCDownloadResult } from '../services/epcProductDownloadService';
 
 // UI components
-import { Badge } from '../components/ui/badge';
+import { Badge } from '@espice/ui';
 
 // CSS imports
 import '../styles/buttons.css';
 import '../styles/tables.css';
 import '../styles/product-queue-integration.css';
 import '../styles/spice-extraction-integration.css';
+import '../styles/product-management-fixes.css';
 
 interface ProductManagementPageProps {
   // Add any props if needed
@@ -100,6 +101,7 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = () => {
   const [showAutoScrapeModal, setShowAutoScrapeModal] = useState(false);
   const [showDatasheetUploadModal, setShowDatasheetUploadModal] = useState(false);
   const [showProductDataUploadModal, setShowProductDataUploadModal] = useState(false);
+  const [showEPCDownloadModal, setShowEPCDownloadModal] = useState(false);
   const [autoScrapingConfig, setAutoScrapingConfig] = useState({
     manufacturer: 'EPC',
     category: '',
@@ -178,6 +180,38 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = () => {
         setProducts(productsData);
         const stats = await productManagementService.getStatistics();
         setStatistics(stats);
+        
+        // Load sample templates
+        setTemplates([
+          {
+            id: 'asm_hemt_template',
+            name: 'ASM HEMT Template',
+            description: 'Advanced SPICE Model for HEMT devices',
+            modelType: 'physical',
+            parameters: []
+          },
+          {
+            id: 'mvsg_template',
+            name: 'MVSG Template',
+            description: 'Multi-Version SPICE Model for GaN devices',
+            modelType: 'physical',
+            parameters: []
+          },
+          {
+            id: 'bsim_template',
+            name: 'BSIM Template',
+            description: 'Berkeley Short-channel IGFET Model',
+            modelType: 'physical',
+            parameters: []
+          },
+          {
+            id: 'empirical_template',
+            name: 'Empirical Template',
+            description: 'Data-driven empirical model',
+            modelType: 'empirical',
+            parameters: []
+          }
+        ]);
       } catch (error) {
         console.error('Error loading products:', error);
       } finally {
@@ -404,6 +438,44 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = () => {
     }
   };
 
+  const handleEPCDownloadComplete = async (results: EPCDownloadResult[]) => {
+    try {
+      // Convert EPC products to our product format and add them to the database
+      for (const result of results) {
+        if (result.success) {
+          const productInput = {
+            name: result.product.name,
+            manufacturer: 'EPC',
+            partNumber: result.product.modelNumber,
+            deviceType: result.product.category,
+            package: result.product.package || 'QFN',
+            description: result.product.description,
+            voltageRating: result.product.voltageRating,
+            currentRating: result.product.currentRating,
+            powerRating: result.product.powerRating,
+            datasheetUrl: result.product.datasheetUrl,
+            spiceModelUrl: result.product.spiceModelUrl,
+            specifications: result.product.specifications
+          };
+
+          await productManagementService.createProduct(productInput);
+        }
+      }
+
+      // Reload products to show the newly downloaded ones
+      const productsData = await productManagementService.getProducts();
+      setProducts(productsData);
+      const stats = await productManagementService.getStatistics();
+      setStatistics(stats);
+
+      setShowEPCDownloadModal(false);
+      alert(`Successfully downloaded ${results.filter(r => r.success).length} EPC products`);
+    } catch (error) {
+      console.error('Error processing EPC downloads:', error);
+      alert('Error processing downloaded products');
+    }
+  };
+
 
 
 
@@ -515,781 +587,1281 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Integrated Tab Navigation */}
-        <div className="bg-card rounded-lg shadow-md border border-border mb-6">
-          <div className="border-b border-border">
-            <div className="flex space-x-8 px-6">
-              <button
-                onClick={() => setActiveProductTab('overview')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  activeProductTab === 'overview'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4" />
-                  Overview
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveProductTab('specifications')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  activeProductTab === 'specifications'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <FileCode className="w-4 h-4" />
-                  Specification
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('data')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'data'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4" />
-                  Data
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('actions')}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'actions'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  Actions
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === 'overview' && (
-          <>
-            {/* Optimized Controls Bar */}
-        <div className="bg-card rounded-lg shadow-md border border-border mb-6">
-          <div className="p-4">
-            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-              {/* Search and Filters */}
-              <div className="flex flex-col sm:flex-row gap-3 flex-1">
-                {/* Search Bar */}
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-                  />
-                </div>
-                
-                {/* Filters */}
-                <div className="flex gap-2">
-                  <select
-                    value={manufacturerFilter}
-                    onChange={(e) => setManufacturerFilter(e.target.value)}
-                    className="px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-                  >
-                    <option value="">All Manufacturers</option>
-                    {statistics?.manufacturersList?.map((manufacturer: string) => (
-                      <option key={manufacturer} value={manufacturer}>{manufacturer}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={deviceTypeFilter}
-                    onChange={(e) => setDeviceTypeFilter(e.target.value)}
-                    className="px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-                  >
-                    <option value="">All Device Types</option>
-                    {statistics?.deviceTypesList?.map((deviceType: string) => (
-                      <option key={deviceType} value={deviceType}>{deviceType}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              {/* Action Buttons - Icon Only with Hover Text */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors relative group"
-                  title="Add Product"
-                >
-                  <Plus className="w-5 h-5" />
-                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    Add Product
-                  </span>
-                </button>
-                
-                <button
-                  onClick={() => setShowCSVImportModal(true)}
-                  className="flex items-center justify-center w-10 h-10 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors relative group"
-                  title="Import Product List"
-                >
-                  <Upload className="w-5 h-5" />
-                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    Import Product List
-                  </span>
-                </button>
-                
-                <button
-                  onClick={() => setShowAutoScrapeModal(true)}
-                  className="flex items-center justify-center w-10 h-10 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-colors relative group"
-                  title="Auto Scrape"
-                >
-                  <RefreshCw className="w-5 h-5" />
-                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    Auto Scrape
-                  </span>
-                </button>
-                
-                <button
-                  onClick={toggleDeleteMode}
-                  className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors relative group ${
-                    deleteMode 
-                      ? 'bg-red-500 text-white hover:bg-red-600' 
-                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
-                  }`}
-                  title={deleteMode ? 'Exit Delete Mode' : 'Delete Mode'}
-                >
-                  <Settings className="w-5 h-5" />
-                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    {deleteMode ? 'Exit Delete Mode' : 'Delete Mode'}
-                  </span>
-                </button>
-                
-                <button
-                  onClick={() => window.location.href = '/graph-extraction'}
-                  className="flex items-center justify-center w-10 h-10 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors relative group"
-                  title="Graph Extraction (with Enhanced LLM)"
-                >
-                  <Zap className="w-5 h-5" />
-                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    Graph Extraction (with Enhanced LLM)
-                  </span>
-                </button>
-                
-                {deleteMode && selectedProductsForDelete.size > 0 && (
-                  <button
-                    onClick={() => setShowDeleteConfirmModal(true)}
-                    className="flex items-center justify-center w-10 h-10 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors relative group"
-                    title={`Delete Selected (${selectedProductsForDelete.size})`}
-                  >
-                    <Settings className="w-5 h-5" />
-                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                      Delete Selected ({selectedProductsForDelete.size})
-                    </span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Products Table */}
-        <div className="bg-card rounded-lg shadow-md border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border">
-              <thead className="bg-muted">
-                <tr>
-                  {deleteMode && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      <input
-                        type="checkbox"
-                        checked={selectedProductsForDelete.size === filteredProducts.length && filteredProducts.length > 0}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedProductsForDelete(new Set(filteredProducts.map(p => p.id)));
-                          } else {
-                            setSelectedProductsForDelete(new Set());
-                          }
-                        }}
-                        className="rounded border-border"
-                      />
-                    </th>
-                  )}
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Manufacturer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Device Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Package
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Characteristics
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Graph Images
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-card divide-y divide-border">
-                {filteredProducts.map((product) => (
-                  <tr 
-                    key={product.id} 
-                    className={`hover:bg-muted/50 transition-colors ${deleteMode ? 'cursor-default' : 'cursor-pointer'} ${selectedProduct?.id === product.id ? 'bg-primary/10 border-l-4 border-primary' : ''}`}
-                    onDoubleClick={() => !deleteMode && handleProductDoubleClick(product.id)}
-                    onClick={() => !deleteMode && handleProductClick(product)}
-                  >
-                    {deleteMode && (
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={selectedProductsForDelete.has(product.id)}
-                          onChange={(e) => handleProductSelect(product.id, e.target.checked)}
-                          className="rounded border-border"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </td>
-                    )}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-foreground">{product.name}</div>
-                        <div className="text-sm text-muted-foreground">{product.partNumber}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                      {product.manufacturer}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                      {product.deviceType}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                      {product.package}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                      <div className="flex items-center gap-2">
-                        {product.characteristics && product.characteristics.length > 0 ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            {product.characteristics.length} uploaded
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="bg-gray-100 text-gray-600">
-                            <AlertCircle className="w-3 h-3 mr-1" />
-                            None
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                      <div className="flex items-center gap-2">
-                        {getProductGraphImageCount(product.id) > 0 ? (
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                            <ImageIcon className="w-3 h-3 mr-1" />
-                            {getProductGraphImageCount(product.id)} images
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="bg-gray-100 text-gray-600">
-                            <ImageIcon className="w-3 h-3 mr-1" />
-                            No images
-                          </Badge>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => window.location.href = `/products/${product.id}`}
-                          className="text-primary hover:text-primary/80 transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleOpenMultiImageUpload(product.id)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
-                          title="Upload Graph Images"
-                        >
-                          <ImageIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setShowExtractionModal(true)}
-                          className="text-success hover:text-success/80 transition-colors"
-                          title="Start Extraction"
-                        >
-                          <Zap className="w-4 h-4" />
-                        </button>
-                        <button 
-                          className="text-info hover:text-info/80 transition-colors"
-                          title="Settings"
-                        >
-                          <Settings className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-          </>
-        )}
-
-        {/* Specification Tab */}
-        {activeTab === 'specification' && (
+    <div className="min-h-screen bg-background p-0">
+      <div className="mx-auto w-full px-6">
+        {selectedProduct ? (
+          // Product Detail View
           <div className="space-y-6">
+            {/* Product Header */}
             <div className="bg-card rounded-lg shadow-md border border-border p-6">
-              <h2 className="text-2xl font-bold text-foreground mb-6">Product Specification</h2>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">{selectedProduct.name}</h2>
+                  <p className="text-muted-foreground">{selectedProduct.partNumber} • {selectedProduct.manufacturer}</p>
+                </div>
+                <button
+                  onClick={handleBackToList}
+                  className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to List
+                </button>
+              </div>
               
-              {selectedProduct && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Product Details */}
-                  <div className="bg-muted rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">Product Details</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Name:</span>
-                        <span className="text-lg font-bold text-foreground">{selectedProduct.name}</span>
-                      </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Part Number:</span>
-                        <span className="text-lg font-bold text-foreground">{selectedProduct.partNumber}</span>
-                      </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Manufacturer:</span>
-                        <span className="text-lg font-bold text-foreground">{selectedProduct.manufacturer}</span>
-                      </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Device Type:</span>
-                        <span className="text-lg font-bold text-foreground">{selectedProduct.deviceType}</span>
-                      </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Package:</span>
-                        <span className="text-lg font-bold text-foreground">{selectedProduct.package}</span>
-                      </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Description:</span>
-                        <p className="text-foreground">{selectedProduct.description}</p>
-                      </div>
-                    </div>
-                  </div>
+              {/* Product Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-primary">{selectedProduct.characteristics?.length || 0}</div>
+                  <div className="text-sm text-muted-foreground">Characteristics</div>
+                </div>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-success">{productImages.length}</div>
+                  <div className="text-sm text-muted-foreground">Graph Images</div>
+                </div>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-info">{productSpiceExtractions.length}</div>
+                  <div className="text-sm text-muted-foreground">SPICE Models</div>
+                </div>
+              </div>
+            </div>
 
-                  {/* Characteristics */}
-                  <div className="bg-muted rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">Characteristics</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Uploaded Characteristics:</span>
-                        <span className="text-lg font-bold text-foreground">{selectedProduct.characteristics?.length || 0}</span>
-                      </div>
-                                             <div>
-                         <span className="block text-sm font-medium text-muted-foreground">Datasheet URL:</span>
-                         <span className="text-lg font-bold text-foreground">{selectedProduct.datasheetUrl ? 'Available' : 'Not Available'}</span>
-                       </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Uploaded Graph Images:</span>
-                        <span className="text-lg font-bold text-foreground">{productImages.length}</span>
-                      </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Extraction Jobs:</span>
-                        <span className="text-lg font-bold text-foreground">{productExtractionJobs.length}</span>
-                      </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">SPICE Extractions:</span>
-                        <span className="text-lg font-bold text-foreground">{productSpiceExtractions.length}</span>
-                      </div>
+            {/* Tab Navigation */}
+            <div className="bg-card rounded-lg shadow-md border border-border">
+              <div className="border-b border-border">
+                <nav className="flex space-x-8 px-6 overflow-x-auto tab-navigation">
+                  <button
+                    onClick={() => setActiveProductTab('overview')}
+                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                      activeProductTab === 'overview'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 flex-shrink-0" />
+                      <span>Overview</span>
                     </div>
-                  </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveProductTab('specifications')}
+                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                      activeProductTab === 'specifications'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileCode className="w-4 h-4 flex-shrink-0" />
+                      <span>Specifications</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveProductTab('parameters')}
+                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                      activeProductTab === 'parameters'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 flex-shrink-0" />
+                      <span>Parameters</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveProductTab('datasheet')}
+                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                      activeProductTab === 'datasheet'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileTextIcon className="w-4 h-4 flex-shrink-0" />
+                      <span>Datasheet</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveProductTab('curves')}
+                    className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                      activeProductTab === 'curves'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <BarChart2 className="w-4 h-4 flex-shrink-0" />
+                      <span>Curves</span>
+                    </div>
+                  </button>
+                </nav>
+              </div>
 
-                  {/* Actions */}
-                  <div className="bg-muted rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">Actions</h3>
-                    <div className="space-y-3">
-                      <button
-                        onClick={() => setShowProductDataUploadModal(true)}
-                        className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!selectedProduct}
+              {/* Tab Content */}
+              <div className="p-6">
+                {/* Overview Tab */}
+                {activeProductTab === 'overview' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5" />
+                      Overview
+                    </h3>
+                    
+                    {/* Quick Actions */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      <button 
+                        onClick={() => setActiveProductTab('specifications')}
+                        className="p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-left"
                       >
-                        Upload Characteristic Data
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileCode className="w-5 h-5 text-primary" />
+                          <span className="font-medium">Specifications</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">View product details and data status</p>
                       </button>
-                      <button
+                      <button 
+                        onClick={() => setActiveProductTab('parameters')}
+                        className="p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Target className="w-5 h-5 text-success" />
+                          <span className="font-medium">Parameters</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Manage and validate parameters</p>
+                      </button>
+                      <button 
+                        onClick={() => setActiveProductTab('datasheet')}
+                        className="p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <FileTextIcon className="w-5 h-5 text-info" />
+                          <span className="font-medium">Datasheet</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Upload and extract datasheet data</p>
+                      </button>
+                      <button 
+                        onClick={() => setActiveProductTab('curves')}
+                        className="p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <BarChart2 className="w-5 h-5 text-warning" />
+                          <span className="font-medium">Curves</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Manage curve data and extraction</p>
+                      </button>
+                    </div>
+
+                    {/* Recent Activity */}
+                    <div className="space-y-4">
+                      <h4 className="text-md font-medium text-foreground">Recent Activity</h4>
+                      <div className="space-y-2">
+                        {productSpiceExtractions.slice(0, 5).map((extraction, index) => (
+                          <div key={index} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                            {getModelTypeIcon(extraction.modelType)}
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-foreground">{extraction.modelType} Model</p>
+                              <p className="text-xs text-muted-foreground">Created {new Date(extraction.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            {getStatusIcon(extraction.status)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Specifications Tab */}
+                {activeProductTab === 'specifications' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <FileCode className="w-5 h-5" />
+                      Specifications
+                    </h3>
+                    
+                    {/* Product Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+                      <div className="md:col-span-2">
+                        <h4 className="text-md font-medium text-foreground mb-3">Product Information</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Name:</span>
+                            <span className="text-foreground font-medium">{selectedProduct.name}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Part Number:</span>
+                            <span className="text-foreground font-medium">{selectedProduct.partNumber}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Manufacturer:</span>
+                            <span className="text-foreground font-medium">{selectedProduct.manufacturer}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Device Type:</span>
+                            <span className="text-foreground font-medium">{selectedProduct.deviceType}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Package:</span>
+                            <span className="text-foreground font-medium">{selectedProduct.package}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="md:col-span-3">
+                        <h4 className="text-md font-medium text-foreground mb-3">ASM HEMT Parameters</h4>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Characteristics:</span>
+                            <Badge variant={selectedProduct.characteristics && selectedProduct.characteristics.length > 0 ? "default" : "secondary"}>
+                              {selectedProduct.characteristics?.length || 0} uploaded
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Graph Images:</span>
+                            <Badge variant={productImages.length > 0 ? "default" : "secondary"}>
+                              {productImages.length} uploaded
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">SPICE Models:</span>
+                            <Badge variant={productSpiceExtractions.length > 0 ? "default" : "secondary"}>
+                              {productSpiceExtractions.length} extracted
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Datasheet:</span>
+                            <Badge variant={selectedProduct.datasheetUrl ? "default" : "secondary"}>
+                              {selectedProduct.datasheetUrl ? "Available" : "Not uploaded"}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex flex-wrap gap-3">
+                      <button 
+                        onClick={() => setActiveProductTab('parameters')}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                      >
+                        Manage Parameters
+                      </button>
+                      <button 
                         onClick={() => setShowDatasheetUploadModal(true)}
-                        className="w-full px-4 py-2 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!selectedProduct}
+                        className="px-4 py-2 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors"
                       >
                         Upload Datasheet
                       </button>
-                      <button
-                        onClick={() => setShowExtractionModal(true)}
-                        className="w-full px-4 py-2 bg-success text-success-foreground rounded-lg hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!selectedProduct}
+                      <button 
+                        onClick={() => setActiveProductTab('curves')}
+                        className="px-4 py-2 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-colors"
                       >
-                        Start SPICE Extraction
+                        View Curves
                       </button>
-                      <button
-                        onClick={() => setShowGraphExtraction(true)}
-                        className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={!selectedProduct}
-                      >
-                        Open Graph Extraction Tool
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Data Tab */}
-        {activeTab === 'data' && (
-          <div className="space-y-6">
-            <div className="bg-card rounded-lg shadow-md border border-border p-6">
-              <h2 className="text-2xl font-bold text-foreground mb-6">Product Data</h2>
-              
-              {selectedProduct && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                     {/* Datasheets */}
-                   <div className="bg-muted rounded-lg p-4">
-                     <h3 className="text-lg font-semibold text-foreground mb-4">Datasheets</h3>
-                     <div className="space-y-3">
-                       {selectedProduct.datasheetUrl && (
-                         <div className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                           <div>
-                             <span className="block text-sm font-medium text-muted-foreground">Datasheet URL:</span> 
-                             <a href={selectedProduct.datasheetUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                               View Datasheet
-                             </a>
-                           </div>
-                           <div>
-                             <span className="block text-sm font-medium text-muted-foreground">Status:</span> Available
-                           </div>
-                         </div>
-                       )}
-                       <button
-                         onClick={() => setShowDatasheetUploadModal(true)}
-                         className="w-full px-4 py-2 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors"
-                       >
-                         Upload New Datasheet
-                       </button>
-                     </div>
-                   </div>
-
-                  {/* Characteristic Data */}
-                  <div className="bg-muted rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">Characteristic Data</h3>
-                    <div className="space-y-3">
-                                             {selectedProduct.characteristics?.map((characteristic, index) => (
-                         <div key={index} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                           <div>
-                             <span className="block text-sm font-medium text-muted-foreground">Type:</span> {characteristic.type}
-                           </div>
-                           <div>
-                             <span className="block text-sm font-medium text-muted-foreground">Name:</span> {characteristic.name}
-                           </div>
-                           <div>
-                             <span className="block text-sm font-medium text-muted-foreground">Uploaded:</span> {new Date(characteristic.uploadedAt).toLocaleDateString()}
-                           </div>
-                         </div>
-                       ))}
-                      <button
+                      <button 
                         onClick={() => setShowProductDataUploadModal(true)}
-                        className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                        className="px-4 py-2 bg-success text-success-foreground rounded-lg hover:bg-success/90 transition-colors"
                       >
-                        Upload New Characteristic Data
+                        Upload Data
+                      </button>
+                      <button 
+                        onClick={() => setShowExtractionModal(true)}
+                        className="px-4 py-2 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors"
+                      >
+                        SPICE Extraction
                       </button>
                     </div>
                   </div>
+                )}
 
-                  {/* Graph Images */}
-                  <div className="bg-muted rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">Graph Images</h3>
-                    <div className="space-y-3">
-                      {productImages.map((image, index) => (
-                        <div key={index} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                          <div>
-                            <span className="block text-sm font-medium text-muted-foreground">File:</span> {image.filename}
+                {/* Parameters Tab */}
+                {activeProductTab === 'parameters' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <Target className="w-5 h-5" />
+                      Parameters
+                    </h3>
+                    
+                    {/* Parameter Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="text-center p-4 bg-muted rounded-lg">
+                        <div className="text-2xl font-bold text-primary">{selectedProduct.parameters?.length || 0}</div>
+                        <div className="text-sm text-muted-foreground">Total Parameters</div>
+                      </div>
+                      <div className="text-center p-4 bg-muted rounded-lg">
+                        <div className="text-2xl font-bold text-success">
+                          {selectedProduct.parameters?.filter(p => p.isValidated)?.length || 0}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Validated</div>
+                      </div>
+                      <div className="text-center p-4 bg-muted rounded-lg">
+                        <div className="text-2xl font-bold text-warning">
+                          {selectedProduct.parameters?.filter(p => !p.isValidated)?.length || 0}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Pending</div>
+                      </div>
+                    </div>
+
+                    {/* Parameter Actions */}
+                    <div className="flex flex-wrap gap-3 mb-6">
+                      <button 
+                        onClick={() => {
+                          // Import parameters functionality
+                          alert('Import Parameters functionality will be implemented');
+                        }}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                      >
+                        Import Parameters
+                      </button>
+                      <button 
+                        onClick={() => {
+                          // Validate all parameters
+                          if (selectedProduct?.parameters) {
+                            const validatedCount = selectedProduct.parameters.filter(p => p.isValidated).length;
+                            alert(`Validated ${validatedCount} out of ${selectedProduct.parameters.length} parameters`);
+                          }
+                        }}
+                        className="px-4 py-2 bg-success text-success-foreground rounded-lg hover:bg-success/90 transition-colors"
+                      >
+                        Validate All
+                      </button>
+                      <button 
+                        onClick={() => {
+                          // Export parameters functionality
+                          if (selectedProduct?.parameters) {
+                            const csvContent = selectedProduct.parameters.map(p => 
+                              `${p.name},${p.value},${p.unit || ''},${p.category},${p.isValidated ? 'Yes' : 'No'}`
+                            ).join('\n');
+                            const blob = new Blob([`Name,Value,Unit,Category,Validated\n${csvContent}`], { type: 'text/csv' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${selectedProduct.partNumber}_parameters.csv`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }
+                        }}
+                        className="px-4 py-2 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors"
+                      >
+                        Export Parameters
+                      </button>
+                      <button 
+                        onClick={() => {
+                          // Compare models functionality
+                          alert('Model comparison functionality will be implemented');
+                        }}
+                        className="px-4 py-2 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-colors"
+                      >
+                        Compare Models
+                      </button>
+                    </div>
+
+                    {/* Parameter List with Sidebar */}
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6" style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: '3fr 2fr', 
+                      gap: '1.5rem'
+                    }}>
+                      {/* ASM HEMT Parameters - Wider Section */}
+                      <div className="lg:col-span-3">
+                        <h4 className="text-md font-medium text-foreground mb-3">ASM HEMT Parameters</h4>
+                        {selectedProduct.parameters && selectedProduct.parameters.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-border">
+                              <thead className="bg-muted">
+                                <tr>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Value</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-card divide-y divide-border">
+                                {selectedProduct.parameters.map((param, index) => (
+                                  <tr key={index} className="hover:bg-muted/50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{param.name}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{param.value}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{param.unit || '-'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{param.category}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                                      <Badge variant={param.isValidated ? "default" : "secondary"}>
+                                        {param.isValidated ? "Validated" : "Pending"}
+                                      </Badge>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                                      <button className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors">
+                                        View
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
-                          <div>
-                            <span className="block text-sm font-medium text-muted-foreground">Upload Date:</span> {new Date(image.uploadDate).toLocaleDateString()}
+                        ) : (
+                          <p className="text-muted-foreground text-center py-8">No parameters available</p>
+                        )}
+                      </div>
+
+                      {/* Parameter Details Sidebar - Narrower Section */}
+                      <div className="lg:col-span-2">
+                        <h4 className="text-md font-medium text-foreground mb-3">Parameter Details</h4>
+                        <div className="space-y-4">
+                          <div className="p-4 bg-muted rounded-lg">
+                            <h5 className="font-medium text-foreground mb-2">Quick Stats</h5>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Total Parameters:</span>
+                                <span className="text-foreground font-medium">{selectedProduct.parameters?.length || 0}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Validated:</span>
+                                <span className="text-foreground font-medium">{selectedProduct.parameters?.filter(p => p.isValidated)?.length || 0}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Pending:</span>
+                                <span className="text-foreground font-medium">{selectedProduct.parameters?.filter(p => !p.isValidated)?.length || 0}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <span className="block text-sm font-medium text-muted-foreground">Status:</span> {image.status}
+                          
+                          <div className="p-4 bg-muted rounded-lg">
+                            <h5 className="font-medium text-foreground mb-2">Quick Actions</h5>
+                            <div className="space-y-2">
+                              <button className="w-full px-3 py-2 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors">
+                                Add Parameter
+                              </button>
+                              <button className="w-full px-3 py-2 bg-success text-success-foreground rounded text-sm hover:bg-success/90 transition-colors">
+                                Validate All
+                              </button>
+                              <button className="w-full px-3 py-2 bg-info text-info-foreground rounded text-sm hover:bg-info/90 transition-colors">
+                                Export CSV
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      ))}
-                      <button
-                        onClick={() => handleOpenMultiImageUpload(selectedProduct.id)}
-                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        Upload New Graph Image
-                      </button>
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Extraction Jobs */}
-                  <div className="bg-muted rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">Extraction Jobs</h3>
-                    <div className="space-y-3">
-                      {productExtractionJobs.map((job, index) => (
-                        <div key={index} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                          <div>
-                            <span className="block text-sm font-medium text-muted-foreground">Job ID:</span> {job.id}
-                          </div>
-                          <div>
-                            <span className="block text-sm font-medium text-muted-foreground">Status:</span> {job.status}
-                          </div>
-                          <div>
-                            <span className="block text-sm font-medium text-muted-foreground">Started:</span> {job.startedAt ? new Date(job.startedAt).toLocaleDateString() : 'N/A'}
+                {/* Datasheet Tab */}
+                {activeProductTab === 'datasheet' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <FileTextIcon className="w-5 h-5" />
+                      Datasheet
+                    </h3>
+                    
+                    {/* Current Datasheet */}
+                    <div className="mb-6">
+                      <h4 className="text-md font-medium text-foreground mb-3">Current Datasheet</h4>
+                      {selectedProduct.datasheetUrl ? (
+                        <div className="p-4 bg-muted rounded-lg">
+                          <p className="text-sm font-medium text-foreground">Datasheet uploaded</p>
+                          <p className="text-xs text-muted-foreground">{selectedProduct.datasheetUrl}</p>
+                          <div className="flex gap-2 mt-3">
+                            <button className="px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors">
+                              View
+                            </button>
+                            <button className="px-3 py-1 bg-secondary text-secondary-foreground rounded text-sm hover:bg-secondary/90 transition-colors">
+                              Download
+                            </button>
                           </div>
                         </div>
-                      ))}
-                      <button
-                        onClick={() => setShowExtractionModal(true)}
-                        className="w-full px-4 py-2 bg-success text-success-foreground rounded-lg hover:bg-success/90 transition-colors"
+                      ) : (
+                        <p className="text-muted-foreground">No datasheet uploaded</p>
+                      )}
+                    </div>
+
+                    {/* Datasheet Actions */}
+                    <div className="flex flex-wrap gap-3 mb-6">
+                      <button 
+                        onClick={() => setShowDatasheetUploadModal(true)}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                       >
-                        Start New Extraction
+                        Upload Datasheet
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (selectedProduct?.datasheetUrl) {
+                            // Extract data from datasheet
+                            alert('Data extraction from datasheet will be implemented');
+                          } else {
+                            alert('Please upload a datasheet first');
+                          }
+                        }}
+                        className="px-4 py-2 bg-success text-success-foreground rounded-lg hover:bg-success/90 transition-colors"
+                      >
+                        Extract Data
+                      </button>
+                      <button 
+                        onClick={() => {
+                          // Compare datasheets functionality
+                          alert('Datasheet comparison functionality will be implemented');
+                        }}
+                        className="px-4 py-2 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors"
+                      >
+                        Compare
+                      </button>
+                      <button 
+                        onClick={() => {
+                          // Validate datasheet functionality
+                          if (selectedProduct?.datasheetUrl) {
+                            alert('Datasheet validation will be implemented');
+                          } else {
+                            alert('Please upload a datasheet first');
+                          }
+                        }}
+                        className="px-4 py-2 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-colors"
+                      >
+                        Validate
                       </button>
                     </div>
-                  </div>
 
-                  {/* SPICE Extractions */}
-                  <div className="bg-muted rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">SPICE Extractions</h3>
-                    <div className="space-y-3">
-                      {productSpiceExtractions.map((extraction, index) => (
-                        <div key={index} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
+                    {/* Last Extraction Results */}
+                    {lastExtractionResult && (
+                      <div className="p-4 bg-muted rounded-lg">
+                        <h4 className="text-md font-medium text-foreground mb-3">Last Extraction Results</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <span className="block text-sm font-medium text-muted-foreground">Model Type:</span> {extraction.modelType}
+                            <div className="text-2xl font-bold text-primary">{lastExtractionResult.extractedGraphs.length}</div>
+                            <div className="text-sm text-muted-foreground">Graphs Extracted</div>
                           </div>
-                          <div>
-                            <span className="block text-sm font-medium text-muted-foreground">Status:</span> {extraction.status}
-                          </div>
-                          <div>
-                            <span className="block text-sm font-medium text-muted-foreground">Confidence:</span> {(extraction.mappingConfidence * 100).toFixed(1)}%
-                          </div>
+                                                     <div>
+                             <div className="text-2xl font-bold text-success">{lastExtractionResult.extractedGraphs.length}</div>
+                             <div className="text-sm text-muted-foreground">Parameters Found</div>
+                           </div>
+                           <div>
+                             <div className="text-2xl font-bold text-info">{lastExtractionResult.metadata?.extractedImagesCount || 0}</div>
+                             <div className="text-sm text-muted-foreground">Images Processed</div>
+                           </div>
                         </div>
-                      ))}
-                      <button
-                        onClick={() => setShowExtractionModal(true)}
-                        className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                      >
-                        Start New SPICE Extraction
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+                )}
 
-        {/* Actions Tab */}
-        {activeTab === 'actions' && (
-          <div className="space-y-6">
-            <div className="bg-card rounded-lg shadow-md border border-border p-6">
-              <h2 className="text-2xl font-bold text-foreground mb-6">Product Actions</h2>
-              
-              {selectedProduct && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Queue Management */}
-                  <div className="bg-muted rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">Queue Management</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Total Images:</span> {productStats?.totalImages || 0}
+                {/* Curves Tab */}
+                {activeProductTab === 'curves' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                      <BarChart2 className="w-5 h-5" />
+                      Curves
+                    </h3>
+                    
+                    {/* Curve Overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                      <div className="text-center p-4 bg-muted rounded-lg">
+                        <div className="text-2xl font-bold text-primary">{productImages.length}</div>
+                        <div className="text-sm text-muted-foreground">Total Images</div>
                       </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Total Jobs:</span> {productStats?.totalJobs || 0}
+                      <div className="text-center p-4 bg-muted rounded-lg">
+                        <div className="text-2xl font-bold text-success">{productImages.filter(img => img.status === 'completed').length}</div>
+                        <div className="text-sm text-muted-foreground">Completed Jobs</div>
                       </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Completed Jobs:</span> {productStats?.completedJobs || 0}
+                      <div className="text-center p-4 bg-muted rounded-lg">
+                        <div className="text-2xl font-bold text-warning">{productImages.filter(img => img.status === 'processing').length}</div>
+                        <div className="text-sm text-muted-foreground">Processing Jobs</div>
                       </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Failed Jobs:</span> {productStats?.failedJobs || 0}
-                      </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Pending Jobs:</span> {productStats?.pendingJobs || 0}
-                      </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Processing Jobs:</span> {productStats?.processingJobs || 0}
-                      </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Average Processing Time:</span> {productStats?.averageProcessingTime ? `${productStats.averageProcessingTime.toFixed(2)}s` : 'N/A'}
+                      <div className="text-center p-4 bg-muted rounded-lg">
+                        <div className="text-2xl font-bold text-info">{productSpiceExtractions.length}</div>
+                        <div className="text-sm text-muted-foreground">SPICE Models</div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setShowGraphExtraction(true)}
-                      className="w-full px-4 py-2 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors"
-                    >
-                      Open Queue Management Tool
-                    </button>
-                  </div>
 
-                  {/* SPICE Extraction */}
-                  <div className="bg-muted rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-foreground mb-4">SPICE Extraction</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">Total SPICE Extractions:</span> {productSpiceExtractions.length}
+                    {/* Graph Image Gallery */}
+                    <GraphImageGallery
+                      productId={selectedProduct.id}
+                      onImageDelete={handleImageDelete}
+                      onImageUpdate={handleImageUpdate}
+                    />
+
+                    {/* Graph Extraction Tool */}
+                    <div className="mt-6 p-4 bg-muted rounded-lg">
+                      <h4 className="text-md font-medium text-foreground mb-3">Graph Extraction Tool</h4>
+                      <p className="text-muted-foreground mb-4">Upload new images and extract curve data with advanced AI processing</p>
+                      <div className="flex flex-wrap gap-3 justify-center">
+                        <button
+                          onClick={() => handleOpenMultiImageUpload(selectedProduct.id)}
+                          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                        >
+                          Upload Images
+                        </button>
+                        <button
+                          onClick={() => window.location.href = '/graph-extraction'}
+                          className="px-4 py-2 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-colors"
+                        >
+                          Open Extraction Tool
+                        </button>
+                        <button
+                          onClick={() => setShowExtractionModal(true)}
+                          className="px-4 py-2 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors"
+                        >
+                          SPICE Extraction
+                        </button>
                       </div>
-                      <div>
-                        <span className="block text-sm font-medium text-muted-foreground">SPICE Extraction Jobs:</span> {productExtractionJobs.length}
-                      </div>
-                      <button
-                        onClick={() => setShowExtractionModal(true)}
-                        className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                      >
-                        Start New SPICE Extraction
-                      </button>
                     </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Create Product Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg p-6 w-full max-w-md border border-border shadow-xl">
-              <h2 className="text-xl font-bold mb-4 text-foreground">Add New Product</h2>
-              
-              {/* Datasheet Upload Section */}
-              <div className="mb-6 p-4 bg-muted rounded-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-foreground">Datasheet & Graph Extraction</h3>
-                  <button
-                    onClick={() => setShowDatasheetUploadModal(true)}
-                    className="flex items-center px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors"
-                  >
-                    <BarChart3 className="w-4 h-4 mr-1" />
-                    Upload Datasheet
-                  </button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Upload datasheet PDF to automatically extract graphs and data points. 
-                  Product name will be auto-generated from part number.
-                </p>
-                {lastExtractionResult && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                    <p className="text-green-800">
-                      ✓ Extracted {lastExtractionResult.extractedGraphs.length} graphs from datasheet
-                    </p>
                   </div>
                 )}
               </div>
-
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Manufacturer"
-                  value={newProduct.manufacturer}
-                  onChange={(e) => setNewProduct({...newProduct, manufacturer: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-                <input
-                  type="text"
-                  placeholder="Part Number *"
-                  value={newProduct.partNumber}
-                  onChange={(e) => setNewProduct({...newProduct, partNumber: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Device Type"
-                  value={newProduct.deviceType}
-                  onChange={(e) => setNewProduct({...newProduct, deviceType: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-                <input
-                  type="text"
-                  placeholder="Package"
-                  value={newProduct.package}
-                  onChange={(e) => setNewProduct({...newProduct, package: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-                <textarea
-                  placeholder="Description"
-                  value={newProduct.description}
-                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                  rows={3}
-                />
+            </div>
+          </div>
+        ) : (
+          // Product List View
+          <>
+            {/* Optimized Controls Bar */}
+            <div className="bg-card rounded-lg border border-border mb-4">
+              <div className="p-4 md:p-3">
+                <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+                  {/* Search and Filters */}
+                  <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                    {/* Search Bar */}
+                    <div className="relative flex-1 max-w-md">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input
+                        type="text"
+                        placeholder="Search products..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                      />
+                    </div>
+                    
+                    {/* Filters */}
+                    <div className="flex gap-2">
+                      <select
+                        value={manufacturerFilter}
+                        onChange={(e) => setManufacturerFilter(e.target.value)}
+                        className="px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                      >
+                        <option value="">All Manufacturers</option>
+                        {statistics?.manufacturersList?.map((manufacturer: string) => (
+                          <option key={manufacturer} value={manufacturer}>{manufacturer}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={deviceTypeFilter}
+                        onChange={(e) => setDeviceTypeFilter(e.target.value)}
+                        className="px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                      >
+                        <option value="">All Device Types</option>
+                        {statistics?.deviceTypesList?.map((deviceType: string) => (
+                          <option key={deviceType} value={deviceType}>{deviceType}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {/* Action Buttons - Icon Only with Hover Text */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowCreateModal(true)}
+                      className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors relative group"
+                      title="Add Product"
+                    >
+                      <Plus className="w-5 h-5" />
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        Add Product
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setShowCSVImportModal(true)}
+                      className="flex items-center justify-center w-10 h-10 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors relative group"
+                      title="Import Product List"
+                    >
+                      <Upload className="w-5 h-5" />
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        Import Product List
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setShowAutoScrapeModal(true)}
+                      className="flex items-center justify-center w-10 h-10 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-colors relative group"
+                      title="Auto Scrape"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        Auto Scrape
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={toggleDeleteMode}
+                      className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors relative group ${
+                        deleteMode 
+                          ? 'bg-red-500 text-white hover:bg-red-600' 
+                          : 'bg-secondary text-secondary-foreground hover:bg-secondary/90'
+                      }`}
+                      title={deleteMode ? 'Exit Delete Mode' : 'Delete Mode'}
+                    >
+                      <Settings className="w-5 h-5" />
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        {deleteMode ? 'Exit Delete Mode' : 'Delete Mode'}
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setShowEPCDownloadModal(true)}
+                      className="flex items-center justify-center w-10 h-10 bg-success text-success-foreground rounded-lg hover:bg-success/90 transition-colors relative group"
+                      title="Download EPC GaN Products"
+                    >
+                      <Download className="w-5 h-5" />
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        Download EPC GaN Products
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => window.location.href = '/graph-extraction'}
+                      className="flex items-center justify-center w-10 h-10 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-colors relative group"
+                      title="Graph Extraction (with Enhanced LLM)"
+                    >
+                      <Zap className="w-5 h-5" />
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        Graph Extraction (with Enhanced LLM)
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setShowExtractionModal(true)}
+                      className="flex items-center justify-center w-10 h-10 bg-info text-info-foreground rounded-lg hover:bg-info/90 transition-colors relative group"
+                      title="SPICE Model Extraction"
+                    >
+                      <Cpu className="w-5 h-5" />
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        SPICE Model Extraction
+                      </span>
+                    </button>
+                    
+                    {deleteMode && selectedProductsForDelete.size > 0 && (
+                      <button
+                        onClick={() => setShowDeleteConfirmModal(true)}
+                        className="flex items-center justify-center w-10 h-10 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors relative group"
+                        title={`Delete Selected (${selectedProductsForDelete.size})`}
+                      >
+                        <Settings className="w-5 h-5" />
+                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          Delete Selected ({selectedProductsForDelete.size})
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-2 mt-6">
+            </div>
+
+            {/* Products Table */}
+            <div className="bg-card rounded-lg border border-border overflow-hidden">
+              <div className="overflow-x-auto table-responsive">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted">
+                    <tr>
+                      {deleteMode && (
+                        <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          <input
+                            type="checkbox"
+                            checked={selectedProductsForDelete.size === filteredProducts.length && filteredProducts.length > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedProductsForDelete(new Set(filteredProducts.map(p => p.id)));
+                              } else {
+                                setSelectedProductsForDelete(new Set());
+                              }
+                            }}
+                            className="rounded border-border"
+                          />
+                        </th>
+                      )}
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Product
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Manufacturer
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Device Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Package
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Characteristics
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Graph Images
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-card divide-y divide-border">
+                    {filteredProducts.map((product: any) => (
+                      <tr 
+                        key={product.id} 
+                        className={`hover:bg-muted/50 transition-colors ${deleteMode ? 'cursor-default' : 'cursor-pointer'} ${selectedProduct?.id === product.id ? 'bg-primary/10 border-l-4 border-primary' : ''}`}
+                        onDoubleClick={() => {
+                          if (!deleteMode) {
+                            handleProductDoubleClick(product.id);
+                          }
+                        }}
+                        onClick={() => {
+                          if (!deleteMode) {
+                            handleProductClick(product);
+                          }
+                        }}
+                      >
+                        {deleteMode && (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={selectedProductsForDelete.has(product.id)}
+                              onChange={(e) => handleProductSelect(product.id, e.target.checked)}
+                              className="rounded border-border"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </td>
+                        )}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="max-w-xs">
+                            <div className="text-sm font-medium text-foreground truncate" title={product.name}>{product.name}</div>
+                            <div className="text-sm text-muted-foreground truncate" title={product.partNumber}>{product.partNumber}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          <span className="truncate block max-w-32" title={product.manufacturer}>{product.manufacturer}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          <span className="truncate block max-w-32" title={product.deviceType}>{product.deviceType}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          <span className="truncate block max-w-32" title={product.package || '-'}>{product.package || '-'}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          <div className="flex items-center gap-2">
+                            {product.characteristics && product.characteristics.length > 0 ? (
+                              <Badge variant="default" className="max-w-32">
+                                <CheckCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                                <span className="truncate">{product.characteristics.length} uploaded</span>
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="max-w-32">
+                                <AlertCircle className="w-3 h-3 mr-1 flex-shrink-0" />
+                                <span>None</span>
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          <div className="flex items-center gap-2">
+                              <Badge variant="default" className="max-w-32">
+                                <ImageIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                                <span className="truncate">{getProductGraphImageCount(product.id)} images</span>
+                              </Badge>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                          <div className="flex items-center gap-2 action-buttons">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenMultiImageUpload(product.id);
+                              }}
+                              className="action-button"
+                              title="Upload Images"
+                            >
+                              <Upload className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.location.href = `/graph-extraction?productId=${product.id}`;
+                              }}
+                              className="action-button"
+                              title="Graph Extraction"
+                            >
+                              <BarChart3 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Modals */}
+        
+        {/* Create Product Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-card rounded-lg shadow-xl border border-border p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-foreground">Create New Product</h2>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-2 border border-border rounded-lg bg-background text-foreground hover:bg-muted transition-colors"
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
                 >
-                  Cancel
+                  <X className="w-5 h-5" />
                 </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Name</label>
+                  <input
+                    type="text"
+                    value={newProduct.name}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    placeholder="Product name"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Manufacturer</label>
+                  <input
+                    type="text"
+                    value={newProduct.manufacturer}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, manufacturer: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    placeholder="Manufacturer"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Part Number</label>
+                  <input
+                    type="text"
+                    value={newProduct.partNumber}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, partNumber: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    placeholder="Part number"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Device Type</label>
+                  <input
+                    type="text"
+                    value={newProduct.deviceType}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, deviceType: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    placeholder="Device type"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Package</label>
+                  <input
+                    type="text"
+                    value={newProduct.package}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, package: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    placeholder="Package"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Description</label>
+                  <textarea
+                    value={newProduct.description}
+                    onChange={(e) => setNewProduct(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    placeholder="Product description"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleCreateProduct}
-                  disabled={!newProduct.partNumber.trim()}
-                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                 >
-                  Create
+                  Create Product
+                </button>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
           </div>
         )}
 
+        {/* Auto Scrape Modal */}
+        {showAutoScrapeModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-card rounded-lg shadow-xl border border-border p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-foreground">Auto Scrape Products</h2>
+                <button
+                  onClick={() => setShowAutoScrapeModal(false)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Manufacturer</label>
+                  <input
+                    type="text"
+                    value={autoScrapingConfig.manufacturer}
+                    onChange={(e) => setAutoScrapingConfig(prev => ({ ...prev, manufacturer: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    placeholder="Manufacturer"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Category (optional)</label>
+                  <input
+                    type="text"
+                    value={autoScrapingConfig.category}
+                    onChange={(e) => setAutoScrapingConfig(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    placeholder="Category"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Max Products</label>
+                  <input
+                    type="number"
+                    value={autoScrapingConfig.maxProducts}
+                    onChange={(e) => setAutoScrapingConfig(prev => ({ ...prev, maxProducts: parseInt(e.target.value) || 50 }))}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                    min="1"
+                    max="1000"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleAutoScrape}
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Start Scraping
+                </button>
+                <button
+                  onClick={() => setShowAutoScrapeModal(false)}
+                  className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirmModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-card rounded-lg shadow-xl border border-border p-6 w-full max-w-md">
+              <div className="flex items-center gap-3 mb-4">
+                <AlertCircle className="w-6 h-6 text-red-500" />
+                <h2 className="text-xl font-semibold text-foreground">Confirm Deletion</h2>
+              </div>
+              
+              <p className="text-muted-foreground mb-6">
+                Are you sure you want to delete {selectedProductsForDelete.size} selected product(s)? This action cannot be undone.
+              </p>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDeleteProducts}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirmModal(false)}
+                  className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CSV Import Modal */}
+        {showCSVImportModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-card rounded-lg shadow-xl border border-border p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-foreground">Import CSV</h2>
+                <button
+                  onClick={() => setShowCSVImportModal(false)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-muted-foreground mb-4">CSV import functionality will be implemented</p>
+              <button
+                onClick={() => setShowCSVImportModal(false)}
+                className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Datasheet Upload Modal */}
+        {showDatasheetUploadModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-card rounded-lg shadow-xl border border-border p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-foreground">Upload Datasheet</h2>
+                <button
+                  onClick={() => setShowDatasheetUploadModal(false)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-muted-foreground mb-4">Datasheet upload functionality will be implemented</p>
+              <button
+                onClick={() => setShowDatasheetUploadModal(false)}
+                className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Product Data Upload Modal */}
+        {showProductDataUploadModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-card rounded-lg shadow-xl border border-border p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-foreground">Upload Product Data</h2>
+                <button
+                  onClick={() => setShowProductDataUploadModal(false)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-muted-foreground mb-4">Product data upload functionality will be implemented</p>
+              <button
+                onClick={() => setShowProductDataUploadModal(false)}
+                className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Multi Image Upload Modal */}
+        {showMultiImageUpload && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-card rounded-lg shadow-xl border border-border p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-foreground">Upload Images</h2>
+                <button
+                  onClick={() => setShowMultiImageUpload(false)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-muted-foreground mb-4">Multi-image upload functionality will be implemented</p>
+              <button
+                onClick={() => setShowMultiImageUpload(false)}
+                className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* EPC Download Modal */}
+        <EPCDownloadModal
+          isOpen={showEPCDownloadModal}
+          onClose={() => setShowEPCDownloadModal(false)}
+          onDownloadComplete={handleEPCDownloadComplete}
+        />
+
         {/* Extraction Modal */}
         {showExtractionModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg p-6 w-full max-w-md border border-border shadow-xl">
-              <h2 className="text-xl font-bold mb-4 text-foreground">SPICE Model Extraction</h2>
-              <div className="space-y-4">
-                <select
-                  value={extractionConfig.modelType}
-                  onChange={(e) => setExtractionConfig({...extractionConfig, modelType: e.target.value as any})}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-card rounded-lg shadow-xl border border-border p-6 w-full max-w-md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-foreground">SPICE Model Extraction</h2>
+                <button
+                  onClick={() => setShowExtractionModal(false)}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors"
                 >
-                  <option value="empirical">Empirical Model</option>
-                  <option value="physical">Physical Model</option>
-                  <option value="hybrid">Hybrid Model</option>
-                </select>
-                <select
-                  value={extractionConfig.modelFormat}
-                  onChange={(e) => setExtractionConfig({...extractionConfig, modelFormat: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="EPC">EPC Format</option>
-                  <option value="ASM">ASM Format</option>
-                  <option value="MVSG">MVSG Format</option>
-                </select>
-                <select
-                  value={extractionConfig.templateId}
-                  onChange={(e) => setExtractionConfig({...extractionConfig, templateId: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="">Select Template</option>
-                  {templates.map(template => (
-                    <option key={template.id} value={template.id}>{template.name}</option>
-                  ))}
-                </select>
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="flex gap-2 mt-6">
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Model Type</label>
+                  <select
+                    value={extractionConfig.modelType}
+                    onChange={(e) => setExtractionConfig({...extractionConfig, modelType: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                  >
+                    <option value="empirical">Empirical Model</option>
+                    <option value="physical">Physical Model</option>
+                    <option value="hybrid">Hybrid Model</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Model Format</label>
+                  <select
+                    value={extractionConfig.modelFormat}
+                    onChange={(e) => setExtractionConfig({...extractionConfig, modelFormat: e.target.value})}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                  >
+                    <option value="EPC">EPC Format</option>
+                    <option value="ASM">ASM Format</option>
+                    <option value="MVSG">MVSG Format</option>
+                    <option value="BSIM">BSIM Format</option>
+                    <option value="generic">Generic Format</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Template</label>
+                  <select
+                    value={extractionConfig.templateId}
+                    onChange={(e) => setExtractionConfig({...extractionConfig, templateId: e.target.value})}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+                  >
+                    <option value="">Select Template</option>
+                    {templates.map(template => (
+                      <option key={template.id} value={template.id}>
+                        {template.name} - {template.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => setShowExtractionModal(false)}
                   className="flex-1 px-4 py-2 border border-border rounded-lg bg-background text-foreground hover:bg-muted transition-colors"
@@ -1302,254 +1874,6 @@ const ProductManagementPage: React.FC<ProductManagementPageProps> = () => {
                 >
                   Start Extraction
                 </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CSV Import Modal */}
-        <CSVImportModal
-          isOpen={showCSVImportModal}
-          onClose={() => setShowCSVImportModal(false)}
-          onImport={async (file) => {
-            const result = await productManagementService.importProductsFromCSV(file);
-            if (result.success) {
-              // Reload products after successful import
-              const productsData = await productManagementService.getProducts();
-              setProducts(productsData);
-              const stats = await productManagementService.getStatistics();
-              setStatistics(stats);
-            }
-            return result;
-          }}
-          title="Import Product List"
-          description="Upload a CSV or Excel file containing product data from manufacturer websites. The system will automatically structure the data to match the current database format."
-        />
-
-        {/* Auto Scrape Modal */}
-        {showAutoScrapeModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg shadow-xl border border-border w-full max-w-md">
-              <div className="flex items-center justify-between p-6 border-b border-border">
-                <h2 className="text-xl font-bold text-foreground">Auto Scrape Products</h2>
-                <button
-                  onClick={() => setShowAutoScrapeModal(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Manufacturer</label>
-                    <select
-                      value={autoScrapingConfig.manufacturer}
-                      onChange={(e) => setAutoScrapingConfig({...autoScrapingConfig, manufacturer: e.target.value})}
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                    >
-                      <option value="EPC">EPC</option>
-                      <option value="TI">Texas Instruments</option>
-                      <option value="Infineon">Infineon</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Category (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g., GaN FET, Power MOSFET"
-                      value={autoScrapingConfig.category}
-                      onChange={(e) => setAutoScrapingConfig({...autoScrapingConfig, category: e.target.value})}
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Max Products</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={autoScrapingConfig.maxProducts}
-                      onChange={(e) => setAutoScrapingConfig({...autoScrapingConfig, maxProducts: parseInt(e.target.value)})}
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-6">
-                  <button
-                    onClick={() => setShowAutoScrapeModal(false)}
-                    className="flex-1 px-4 py-2 border border-border rounded-lg bg-background text-foreground hover:bg-muted transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAutoScrape}
-                    className="flex-1 px-4 py-2 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-colors"
-                  >
-                    Start Scraping
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteConfirmModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg shadow-xl border border-border w-full max-w-md">
-              <div className="flex items-center justify-between p-6 border-b border-border">
-                <h2 className="text-xl font-bold text-foreground">Confirm Deletion</h2>
-                <button
-                  onClick={() => setShowDeleteConfirmModal(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="p-6">
-                <p className="text-foreground mb-4">
-                  Are you sure you want to delete {selectedProductsForDelete.size} selected product(s)? This action cannot be undone.
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowDeleteConfirmModal(false)}
-                    className="flex-1 px-4 py-2 border border-border rounded-lg bg-background text-foreground hover:bg-muted transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleDeleteProducts}
-                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Datasheet Upload Modal */}
-        <DatasheetUploadModal
-          isOpen={showDatasheetUploadModal}
-          onClose={() => setShowDatasheetUploadModal(false)}
-          onExtractionComplete={handleDatasheetExtractionComplete}
-          partNumber={newProduct.partNumber}
-        />
-
-        {/* Product Data Upload Modal */}
-        <ProductDataUploadModal
-          isOpen={showProductDataUploadModal}
-          onClose={() => setShowProductDataUploadModal(false)}
-          productId={selectedProduct?.id || ''}
-          productName={selectedProduct?.name || ''}
-          onUploadComplete={handleCharacteristicDataUpload}
-        />
-
-        {/* Multi-Image Upload Modal */}
-        {showMultiImageUpload && selectedProductForImageUpload && (
-          <MultiImageUpload
-            productId={selectedProductForImageUpload}
-            onImagesUploaded={handleImagesUploaded}
-            onCancel={() => {
-              setShowMultiImageUpload(false);
-              setSelectedProductForImageUpload(null);
-            }}
-            maxImages={10}
-            acceptedFileTypes={['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'image/tiff']}
-          />
-        )}
-
-        {/* Graph Extraction Tool Modal */}
-        {showGraphExtraction && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg p-6 w-full max-w-4xl h-full flex flex-col border border-border shadow-xl">
-              <div className="flex items-center justify-between mb-4 border-b border-border pb-4">
-                <h2 className="text-xl font-bold text-foreground">Graph Extraction Tool</h2>
-                <button
-                  onClick={() => setShowGraphExtraction(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                                 <GraphImageGallery
-                   productId={selectedProduct?.id || ''}
-                   onImageDelete={handleImageDelete}
-                   onImageUpdate={handleImageUpdate}
-                 />
-              </div>
-              <div className="p-4 border-t border-border">
-                <h3 className="text-lg font-semibold text-foreground mb-4">Upload New Graph Image</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Image File</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Description</label>
-                    <input
-                      type="text"
-                      value={uploadDescription}
-                      onChange={(e) => setUploadDescription(e.target.value)}
-                      placeholder="e.g., I-V characteristics, C-V curves"
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">Extraction Method</label>
-                      <select
-                        value={uploadMethod}
-                        onChange={(e) => setUploadMethod(e.target.value as any)}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                      >
-                        <option value="standard">Standard</option>
-                        <option value="legacy">Legacy Algorithm</option>
-                        <option value="llm">LLM Assisted</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">Priority</label>
-                      <select
-                        value={uploadPriority}
-                        onChange={(e) => setUploadPriority(e.target.value as any)}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
-                      >
-                        <option value="low">Low</option>
-                        <option value="normal">Normal</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="autoCreateJobs"
-                      checked={autoCreateJobs}
-                      onChange={(e) => setAutoCreateJobs(e.target.checked)}
-                      className="rounded border-border"
-                    />
-                    <label htmlFor="autoCreateJobs" className="text-sm text-foreground">
-                      Automatically create extraction jobs
-                    </label>
-                  </div>
-                  <button
-                    onClick={() => {/* TODO: Implement upload */}}
-                    disabled={!uploadFile}
-                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Upload Image
-                  </button>
-                </div>
               </div>
             </div>
           </div>

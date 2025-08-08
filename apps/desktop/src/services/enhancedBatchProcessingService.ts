@@ -1,14 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
-import EnhancedGraphExtractionService, { 
-  EnhancedGraphConfig, 
-  AutoProcessingConfig, 
-  BatchProcessingResult 
-} from './enhancedGraphExtractionService';
+import EnhancedGraphExtractionService from './enhancedGraphExtractionService';
 import type { 
-  BatchJob, 
-  ProcessingStats, 
-  ProgressUpdate, 
-  ProcessingEvent 
+  BatchJob,
+  ProcessingStats,
+  ProcessingEvent
 } from '../types';
 
 export interface BatchJobConfig {
@@ -489,7 +484,7 @@ class EnhancedBatchProcessingService {
           priority: 1,
           maxRetries: 3,
           timeout: 30000,
-          metadata: { productId: image.productId, imageId: image.id }
+          metadata: { imageId: image.id }
         });
         jobIds.push(jobId);
       }

@@ -1,13 +1,22 @@
 import React, { useState, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Alert, AlertDescription } from './ui/alert';
-import { Progress } from './ui/progress';
-import { Badge } from './ui/badge';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle, 
+  Button, 
+  Input, 
+  Label, 
+  Textarea, 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger, 
+  Alert, 
+  AlertDescription, 
+  Progress, 
+  Badge 
+} from '@espice/ui';
 import { 
   Upload, 
   Download, 

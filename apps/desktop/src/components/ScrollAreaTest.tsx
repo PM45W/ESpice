@@ -1,6 +1,5 @@
 import React from 'react';
-import { ScrollArea } from './ui/scroll-area';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { ScrollArea, Card, CardContent, CardHeader, CardTitle } from '@espice/ui';
 
 export const ScrollAreaTest: React.FC = () => {
   return (

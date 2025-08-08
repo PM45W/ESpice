@@ -204,6 +204,118 @@ services:
       - espice-network
     restart: unless-stopped
 
+  # Consolidated Data Processing Service
+  data-processing-service:
+    build:
+      context: ./services/core/data-processing-service
+      dockerfile: Dockerfile
+    ports:
+      - "8011:8011"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./temp:/app/temp
+      - ./examples:/app/examples
+      - ./data:/app/data
+    networks:
+      - espice-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Consolidated Media Processing Service
+  media-processing-service:
+    build:
+      context: ./services/core/media-processing-service
+      dockerfile: Dockerfile
+    ports:
+      - "8012:8012"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./temp:/app/temp
+      - ./data:/app/data
+    networks:
+      - espice-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Consolidated System Service
+  system-service:
+    build:
+      context: ./services/core/system-service
+      dockerfile: Dockerfile
+    ports:
+      - "8015:8015"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./data:/app/data
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    networks:
+      - espice-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8015/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PDF Service
+  pdf-service:
+    build:
+      context: ./services/core/pdf-service
+      dockerfile: Dockerfile
+    ports:
+      - "8013:8013"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./temp:/app/temp
+      - ./data:/app/data
+    networks:
+      - espice-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8013/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # SPICE Generation Service
+  spice-generation-service:
+    build:
+      context: ./services/core/spice-generation
+      dockerfile: Dockerfile
+    ports:
+      - "8014:8014"
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./temp:/app/temp
+      - ./data:/app/data
+    networks:
+      - espice-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8014/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 volumes:
   postgres_data:
   redis_data:

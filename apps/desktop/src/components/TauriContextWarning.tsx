@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { curveExtractionService } from '../services/curveExtractionService';
 import { AlertTriangle, Globe, Download, X } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button } from '@espice/ui';
 
 export const TauriContextWarning: React.FC = () => {
   const [contextInfo, setContextInfo] = useState<{
